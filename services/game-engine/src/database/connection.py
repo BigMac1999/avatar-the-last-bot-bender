@@ -75,6 +75,11 @@ class DatabaseManager:
         try:
             conn = self.connection_pool.getconn()
             yield conn
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            logger.error(f"Error getting database connection: {e}")
+            raise
         finally:
             if conn:
                 self.connection_pool.putconn(conn)

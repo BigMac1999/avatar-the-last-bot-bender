@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from database.connection import database_manager
+from database.migrations import MigrationRunner
 
 import logging
 
@@ -11,8 +12,14 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    """Initialize database connection and run migrations on startup."""
     await database_manager.connect()
     logger.info("Game Engine started and database connected")
+    
+    #Run database Migrations
+    migration_runner = MigrationRunner(database_manager)
+    await migration_runner.run_migrations()
+    logger.info("Database migrations completed successfully, game engine started successfully")
     yield
     # Shutdown
     await database_manager.disconnect()
@@ -39,3 +46,10 @@ async def health_check():
         "message": health_status.get("message", "No message provided"),
         "test_query": health_status.get("test_query", "not executed")
     }
+    
+@app.get("/migrations")
+async def migration_status():
+    """Get migration status"""
+    migration_runner = MigrationRunner(database_manager)
+    status = await migration_runner.get_migration_status()
+    return status
