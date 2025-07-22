@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: atla_db
+      POSTGRES_USER: atla_user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+  
+  game-engine:
+    build: ./services/game-engine
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgres://atla_user:password@postgres:5432/atla_db
+    volumes:
+      - ./services/game-engine:/app
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
