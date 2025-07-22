@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from database.connection import database_manager
 from database.migrations import MigrationRunner
+from repositories.character_repository import CharacterRepository
+# from repositories.user_repository import UserRepository
 
 import logging
 
@@ -53,3 +55,17 @@ async def migration_status():
     migration_runner = MigrationRunner(database_manager)
     status = await migration_runner.get_migration_status()
     return status
+
+@app.get("/characters")
+async def get_all_characters():
+    """Fetch all characters from the database"""
+    result = await CharacterRepository().get_all_characters()
+    return result
+
+@app.get("/characters/{character_name}")
+async def get_character_by_name(character_name: str):
+    """Fetch a character by name"""
+    result = await CharacterRepository().get_character_by_id(character_name)
+    if result:
+        return result
+    return {"error": "Character not found"}
