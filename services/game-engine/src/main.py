@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 from database.connection import database_manager
 from database.migrations import MigrationRunner
 from repositories.character_repository import CharacterRepository
-# from repositories.user_repository import UserRepository
 
 import logging
 
@@ -34,6 +33,7 @@ app = FastAPI(
     lifespan=lifespan
     )
 
+"""Health check endpoints and migrations"""
 @app.get("/ping")
 async def ping():
     """Health check endpoint"""
@@ -56,6 +56,12 @@ async def migration_status():
     status = await migration_runner.get_migration_status()
     return status
 
+
+# TODO: Add error handling for endpoints
+# Currently, if an endpoint call has an error, it still returns a 200 status code
+# TODO: Update migrations and sql tables today to handle more robust logic
+"""Character-related endpoints (currently only for validation)"""
+
 @app.get("/characters")
 async def get_all_characters():
     """Fetch all characters from the database"""
@@ -69,3 +75,18 @@ async def get_character_by_name(character_name: str):
     if result:
         return result
     return {"error": "Character not found"}
+
+"""Future user-related endpoints (currently commented out)"""
+
+# Bonk Calls
+# Character collection for !roll
+# @app.get("/roll")
+# async def roll_character():
+#     newCharacter = await RollService().roll_character("Aang")
+# 
+# Mac Calls
+# Needed discord commands:!battle, !stats, !roster, !website
+# Battle system for !battle
+# Ability to return user's character stats for !stats
+# Ability to return all user's characters for !roster
+# Website link for !website
