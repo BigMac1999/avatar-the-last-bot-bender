@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 class MigrationRunner:
     def __init__(self, database_manager):
         self.db_manager = database_manager
-        self.migrations_dir = Path(__file__).parent.parent.parent / "migrations"
+        self.migrations_dir = Path(__file__).parent / "migrations"
 
     async def initialize_migration_table(self):
         """Create the schema_migrations table if it doesn't exist."""
