@@ -19,7 +19,22 @@ services:
     volumes:
       - ./services/game-engine:/app
     ports:
+      - "8080:3000"
+
+  website:
+    build: ./services/website
+    depends_on:
+      - game-engine
+    environment:
+      API_URL: http://localhost:8080
+    volumes:
+      - ./services/website:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
       - "3000:3000"
+    networks:
+      - default
 
 volumes:
   postgres_data:
