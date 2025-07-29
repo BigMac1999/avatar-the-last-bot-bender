@@ -123,7 +123,7 @@ The API is designed to support the following Discord bot commands:
 - `!battle` - Battle system
 - `!stats` - Character statistics
 - `!roster` - User's character collection
-- `!website` - Link to web interface
+- `!website` - Link to web interface (http://localhost:3001 for now for local dev)
 
 ---
 

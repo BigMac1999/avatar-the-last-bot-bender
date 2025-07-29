@@ -8,7 +8,7 @@ The application consists of three main Docker containers:
 
 - **game-engine** - FastAPI backend service that handles game logic and database operations
 - **discord-bot** - Discord bot that interfaces with users and communicates with the game engine
-- **website** - Web frontend for the application
+- **website** - Next.js web frontend with TypeScript and Tailwind CSS
 - **postgres** - PostgreSQL database for persistent data storage
 
 ## Development Setup
@@ -28,7 +28,13 @@ The application consists of three main Docker containers:
    docker compose up postgres game-engine
    ```
 
-3. **Test the game engine:**
+3. **Start the website (optional):**
+   ```bash
+   docker compose up website
+   ```
+   The website will be available at http://localhost:3001
+
+4. **Test the game engine:**
    The game engine runs on port 8080. Test endpoints using curl:
    ```bash
    curl http://localhost:8080/ping
@@ -78,7 +84,13 @@ avatar-the-last-bot-bender/
 │   │   ├── Dockerfile
 │   │   └── requirements.txt
 │   ├── discord-bot/           # Discord bot service (planned)
-│   └── website/               # Web frontend (planned)
+│   └── website/               # Next.js web frontend
+│       ├── src/
+│       │   └── app/           # Next.js app directory structure
+│       ├── public/            # Static assets
+│       ├── package.json       # Node.js dependencies
+│       ├── Dockerfile         # Website container config
+│       └── next.config.ts     # Next.js configuration
 ├── docker-compose.yml         # Container orchestration
 └── README.md                  # This file
 ```

@@ -66,10 +66,18 @@ All services are containerized using Docker and orchestrated with Docker Compose
 docker compose up postgres game-engine
 ```
 
-#### Full Stack (when implemented)
+#### Website Only
 ```bash
-# Start all services
-docker compose up
+# Build and start the website
+docker compose build website
+docker compose up website
+```
+The website will be available at http://localhost:3001
+
+#### Full Stack
+```bash
+# Start all services (database, game engine, and website)
+docker compose up postgres game-engine website
 ```
 
 #### Individual Services
@@ -80,7 +88,7 @@ docker compose up postgres
 # Game engine only (requires database)
 docker compose up postgres game-engine
 
-# Website only (when implemented)
+# Website only
 docker compose up website
 
 # Discord bot only (when implemented)
@@ -141,6 +149,10 @@ Database:
 Game Engine:
   - Port: 8080
   - Database URL: postgres://atla_user:password@postgres:5432/atla_db
+
+Website:
+  - Port: 3001
+  - Framework: Next.js with TypeScript and Tailwind CSS
 ```
 
 ### Custom Configuration
