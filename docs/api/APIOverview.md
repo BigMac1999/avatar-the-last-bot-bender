@@ -4,7 +4,7 @@
 
 The ATLA Game Engine provides a REST API for managing characters, battles, and user interactions in the Avatar: The Last Airbender companion app.
 
-**Base URL:** `http://localhost:3000`
+**Base URL:** `http://localhost:8080`
 
 ---
 

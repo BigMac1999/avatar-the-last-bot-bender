@@ -29,12 +29,12 @@ The application consists of three main Docker containers:
    ```
 
 3. **Test the game engine:**
-   The game engine runs on port 3000. Test endpoints using curl:
+   The game engine runs on port 8080. Test endpoints using curl:
    ```bash
-   curl http://localhost:3000/ping
-   curl http://localhost:3000/health
-   curl http://localhost:3000/characters
-   curl http://localhost:3000/migrations
+   curl http://localhost:8080/ping
+   curl http://localhost:8080/health
+   curl http://localhost:8080/characters
+   curl http://localhost:8080/migrations
    ```
 
 ### Available Endpoints

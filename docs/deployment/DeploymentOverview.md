@@ -41,21 +41,21 @@ All services are containerized using Docker and orchestrated with Docker Compose
 
    This will start:
    - PostgreSQL database on port `5432`
-   - Game Engine API on port `3000`
+   - Game Engine API on port `8080`
 
 4. **Verify deployment:**
    ```bash
    # Basic health check
-   curl http://localhost:3000/ping
+   curl http://localhost:8080/ping
    
    # Database health check
-   curl http://localhost:3000/health
+   curl http://localhost:8080/health
    
    # Test character endpoints
-   curl http://localhost:3000/characters
+   curl http://localhost:8080/characters
    
    # Check migration status
-   curl http://localhost:3000/migrations
+   curl http://localhost:8080/migrations
    ```
 
 ### Service-Specific Deployment
@@ -139,7 +139,7 @@ Database:
   - Password: password
 
 Game Engine:
-  - Port: 3000
+  - Port: 8080
   - Database URL: postgres://atla_user:password@postgres:5432/atla_db
 ```
 
@@ -185,11 +185,11 @@ Once deployed, the Game Engine API provides:
 
 **Port already in use:**
 ```bash
-# Check what's using port 3000
-netstat -tulpn | grep :3000
+# Check what's using port 8080
+netstat -tulpn | grep :8080
 
 # Use different port
-docker compose up -p 3001:3000 game-engine
+docker compose up -p 8081:8080 game-engine
 ```
 
 **Database connection failed:**
