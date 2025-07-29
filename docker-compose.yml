@@ -19,7 +19,7 @@ services:
     volumes:
       - ./services/game-engine:/app
     ports:
-      - "8080:3000"
+      - "8080:8080"
 
   website:
     build: ./services/website
@@ -27,12 +27,15 @@ services:
       - game-engine
     environment:
       API_URL: http://localhost:8080
+      WATCHPACK_POLLING: true
+      CHOKIDAR_USEPOLLING: true
+      NEXT_TELEMETRY_DISABLED: 1
     volumes:
       - ./services/website:/app
       - /app/node_modules
       - /app/.next
     ports:
-      - "3000:3000"
+      - "3001:3001"
     networks:
       - default
 
