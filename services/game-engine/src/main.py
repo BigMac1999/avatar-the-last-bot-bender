@@ -78,15 +78,27 @@ async def get_character_by_name(character_name: str):
 
 """Future user-related endpoints (currently commented out)"""
 
-# Bonk Calls
-# Character collection for !roll
-# @app.get("/roll")
-# async def roll_character():
-#     newCharacter = await RollService().roll_character("Aang")
-# 
-# Mac Calls
-# Needed discord commands:!battle, !stats, !roster, !website
-# Battle system for !battle
-# Ability to return user's character stats for !stats
-# Ability to return all user's characters for !roster
-# Website link for !website
+
+# BigMacs Todos
+# TODO: Implement the battle engine for the bot (Python)
+# TODO: Implement a test file to run endpoints to validate the battle engine (bash using curls)
+# TODO: Implement the character collection mechanism (SQL + Python)
+# TODO: Implement the roster command to return all characters (SQL + Python) 
+# TODO: Implement the stats command to return character stats (SQL + Python)
+# TODO: Implement 3rd party blob storage for character images (Python + MinIO or similar)
+# TODO: Implement the following stats to be returned for each character:
+# - User battles won
+# - User battles lost
+# - Number of times user has rolled a character
+# - Return abilities/skill tree for each character
+# - Return active abilities for each character
+# - Return general stats for each character
+# TODO: Implement Discord OAuth for user authentication for the website(Python + Discord API)
+
+# Bianca's TODOs
+# TODO: Implement the roll command to roll a character (Python + SQL)
+# TODO: Implement the website command to link to the expected http://localhost:3001 endpoint for local dev for now (Python)
+
+# Both/Either TODOs
+# TODO: Implement the logic to onboard a new user to the bot (Python + SQL)
+# TODO: Begin to seed the database with characters (Python + SQL)
