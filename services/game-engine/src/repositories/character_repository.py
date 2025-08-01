@@ -77,12 +77,15 @@ class CharacterRepository:
         """
         with database_manager.get_db_session() as session:
             character = session.query(Character)\
-                .options(joinedload(Character.character_abilities).joinedload(Character.abilities))\
+                .options(joinedload(Character.character_abilities))\
                 .filter(Character.id == character_id)\
                 .first()
             return character
+        
+                        # .options(joinedload(Character.character_abilities).joinedload(Character.abilities))\
+
     
-    async def create_character(self, name: str, element: str, rarity: int, hp: int, attack: int, description: str = None) -> Character:
+    async def create_character(self, name: str, element: str, rarity: int, hp: int, attack: int, description: str = "") -> Character:
         """
         Create new character.
         

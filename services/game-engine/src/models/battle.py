@@ -2,6 +2,9 @@ from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, func
 from sqlalchemy.orm import relationship
 from database.connection import Base
 
+# def BattleRequest():
+    
+
 class Battle(Base):
     """
     SQLAlchemy model for the battles table.

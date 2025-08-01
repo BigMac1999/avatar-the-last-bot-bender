@@ -86,7 +86,7 @@ async def get_character_by_name(character_name: str):
             "hp": result.hp,
             "attack": result.attack,
             "description": result.description,
-            "created_at": result.created_at.isoformat() if result.created_at else None
+            "created_at": result.created_at.isoformat() if result.created_at is not None else None
         }
     return {"error": "Character not found"}
 
