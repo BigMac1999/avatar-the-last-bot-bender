@@ -77,17 +77,8 @@ async def get_character_by_name(character_name: str):
     """Fetch a character by name"""
     result = await CharacterRepository().get_character_by_name(character_name)
     if result:
-        # Convert SQLAlchemy object to dict for JSON response
-        return {
-            "id": result.id,
-            "name": result.name,
-            "element": result.element,
-            "rarity": result.rarity,
-            "hp": result.hp,
-            "attack": result.attack,
-            "description": result.description,
-            "created_at": result.created_at.isoformat() if result.created_at is not None else None
-        }
+        # Repository already returns serialized dict
+        return result
     return {"error": "Character not found"}
 
 """Future user-related endpoints (currently commented out)"""

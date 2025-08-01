@@ -15,9 +15,22 @@ class CharacterRepository:
     - Type hints with SQLAlchemy models
     """
     
-    async def get_all_characters(self) -> List[Character]:
+    def _serialize_character(self, character: Character) -> dict:
+        """Helper method to serialize a Character object to dictionary"""
+        return {
+            "id": character.id,
+            "name": character.name,
+            "element": character.element,
+            "rarity": character.rarity,
+            "hp": character.hp,
+            "attack": character.attack,
+            "description": character.description,
+            "created_at": character.created_at.isoformat() if character.created_at is not None else None
+        }
+    
+    async def get_all_characters(self) -> List[dict]:
         """
-        Get all characters from database.
+        Get all characters from database, returning serialized dictionaries.
         
         Old way: cursor.execute("SELECT * FROM characters")
         New way: session.query(Character).all()
@@ -26,14 +39,17 @@ class CharacterRepository:
         - Returns Python objects instead of tuples
         - Automatic type conversion
         - IDE autocomplete and type checking
+        - Serialized while session is active
         """
         with database_manager.get_db_session() as session:
             characters = session.query(Character).all()
-            return characters
+            
+            # Serialize all characters while session is active
+            return [self._serialize_character(char) for char in characters]
     
-    async def get_character_by_name(self, character_name: str) -> Optional[Character]:
+    async def get_character_by_name(self, character_name: str) -> Optional[dict]:
         """
-        Get character by name.
+        Get character by name, returning a dictionary for JSON serialization.
         
         Old way: "SELECT * FROM characters WHERE name = %s"
         New way: session.query(Character).filter(Character.name == character_name).first()
@@ -42,19 +58,26 @@ class CharacterRepository:
         - No SQL injection risks (automatic parameter binding)
         - Column names are checked at development time
         - Returns None instead of empty result
+        - Serializes to dict while session is active (avoids DetachedInstanceError)
         """
         with database_manager.get_db_session() as session:
             character = session.query(Character).filter(Character.name == character_name).first()
-            return character
+            if not character:
+                return None
+            
+            # Serialize while session is active
+            return self._serialize_character(character)
     
-    async def get_character_by_id(self, character_id: int) -> Optional[Character]:
+    async def get_character_by_id(self, character_id: int) -> Optional[dict]:
         """Get character by ID - demonstrates primary key lookup."""
         with database_manager.get_db_session() as session:
             # .get() is shorthand for primary key lookup
             character = session.get(Character, character_id)
-            return character
+            if not character:
+                return None
+            return self._serialize_character(character)
     
-    async def get_characters_by_element(self, element: str) -> List[Character]:
+    async def get_characters_by_element(self, element: str) -> List[dict]:
         """
         Get all characters of a specific element.
         Demonstrates filtering with WHERE clause equivalent.
@@ -64,9 +87,9 @@ class CharacterRepository:
                 .filter(Character.element == element)\
                 .order_by(Character.rarity.desc(), Character.name)\
                 .all()
-            return characters
+            return [self._serialize_character(char) for char in characters]
     
-    async def get_character_with_abilities(self, character_id: int) -> Optional[Character]:
+    async def get_character_with_abilities(self, character_id: int) -> Optional[dict]:
         """
         Get character with all their abilities loaded.
         
@@ -80,12 +103,30 @@ class CharacterRepository:
                 .options(joinedload(Character.character_abilities))\
                 .filter(Character.id == character_id)\
                 .first()
-            return character
+            
+            if not character:
+                return None
+                
+            # Serialize character with abilities
+            char_data = self._serialize_character(character)
+            char_data["abilities"] = [
+                {
+                    "id": ca.ability.id,
+                    "name": ca.ability.name,
+                    "description": ca.ability.description,
+                    "attack": ca.ability.attack,
+                    "defense": ca.ability.defense,
+                    "element": ca.ability.element,
+                    "unlock_cost": ca.ability.unlock_cost
+                }
+                for ca in character.character_abilities
+            ]
+            return char_data
         
                         # .options(joinedload(Character.character_abilities).joinedload(Character.abilities))\
 
     
-    async def create_character(self, name: str, element: str, rarity: int, hp: int, attack: int, description: str = "") -> Character:
+    async def create_character(self, name: str, element: str, rarity: int, hp: int, attack: int, description: str = "") -> dict:
         """
         Create new character.
         
@@ -109,9 +150,9 @@ class CharacterRepository:
             session.add(character)
             session.flush()  # Get the ID without committing
             session.refresh(character)  # Refresh to get generated fields
-            return character
+            return self._serialize_character(character)
     
-    async def update_character(self, character_id: int, **updates) -> Optional[Character]:
+    async def update_character(self, character_id: int, **updates) -> Optional[dict]:
         """
         Update character fields.
         
@@ -129,7 +170,7 @@ class CharacterRepository:
             
             session.flush()
             session.refresh(character)
-            return character
+            return self._serialize_character(character)
     
     async def delete_character(self, character_id: int) -> bool:
         """Delete character by ID."""
