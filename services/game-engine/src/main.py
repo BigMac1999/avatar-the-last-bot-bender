@@ -17,7 +17,11 @@ async def lifespan(app: FastAPI):
     await database_manager.connect()
     logger.info("Game Engine started and database connected")
     
-    #Run database Migrations
+    # Create tables from SQLAlchemy models
+    database_manager.create_tables()
+    logger.info("SQLAlchemy tables created/updated")
+    
+    #Run database Migrations  
     migration_runner = MigrationRunner(database_manager)
     await migration_runner.run_migrations()
     logger.info("Database migrations completed successfully, game engine started successfully")
@@ -71,9 +75,19 @@ async def get_all_characters():
 @app.get("/characters/{character_name}")
 async def get_character_by_name(character_name: str):
     """Fetch a character by name"""
-    result = await CharacterRepository().get_character_by_id(character_name)
+    result = await CharacterRepository().get_character_by_name(character_name)
     if result:
-        return result
+        # Convert SQLAlchemy object to dict for JSON response
+        return {
+            "id": result.id,
+            "name": result.name,
+            "element": result.element,
+            "rarity": result.rarity,
+            "hp": result.hp,
+            "attack": result.attack,
+            "description": result.description,
+            "created_at": result.created_at.isoformat() if result.created_at else None
+        }
     return {"error": "Character not found"}
 
 """Future user-related endpoints (currently commented out)"""

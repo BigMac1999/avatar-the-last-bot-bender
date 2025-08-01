@@ -1,1 +1,0 @@
-GET_ALL_CHARACTERS = "SELECT * FROM characters"

@@ -14,17 +14,16 @@ class MigrationRunner:
     async def initialize_migration_table(self):
         """Create the schema_migrations table if it doesn't exist."""
         try:
-            with self.db_manager.get_db_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
+            # Updated to use SQLAlchemy session instead of raw psycopg2
+            with self.db_manager.get_db_session() as session:
+                from sqlalchemy import text
+                session.execute(text("""
                     CREATE TABLE IF NOT EXISTS schema_migrations (
                         version VARCHAR(255) PRIMARY KEY,
                         applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
-                """)
-                conn.commit()
-                cursor.close()
-                logger.info("Migration table tracking ensured.")
+                """))
+                logger.info("Migration table tracking ensured (SQLAlchemy)")
                 
         except Exception as e:
             logger.error(f"Failed to create migration table: {e}")
@@ -33,11 +32,11 @@ class MigrationRunner:
     async def get_applied_migrations(self) -> Set[str]:
         """Get a set of applied migration versions."""
         try:
-            with self.db_manager.get_db_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT version FROM schema_migrations ORDER BY version")
-                applied = {row[0] for row in cursor.fetchall()}
-                cursor.close()
+            # Updated to use SQLAlchemy session
+            with self.db_manager.get_db_session() as session:
+                from sqlalchemy import text
+                result = session.execute(text("SELECT version FROM schema_migrations ORDER BY version"))
+                applied = {row[0] for row in result.fetchall()}
                 return applied
         except Exception as e:
             logger.error(f"Failed to fetch applied migrations: {e}")
@@ -69,22 +68,21 @@ class MigrationRunner:
             with open(migration_file, 'r') as file:
                 migration_sql = file.read()
                 
-            # Apply migration SQL
-            with self.db_manager.get_db_connection() as conn:
-                cursor = conn.cursor()
+            # Apply migration using SQLAlchemy session
+            with self.db_manager.get_db_session() as session:
+                from sqlalchemy import text
                 
                 # Execute the SQL commands
-                cursor.execute(migration_sql)
+                session.execute(text(migration_sql))
                 
                 # Record that the migration was applied
-                cursor.execute("""
-                    INSERT INTO schema_migrations (version) VALUES (%s)
-                """, (migration_name,))
+                session.execute(
+                    text("INSERT INTO schema_migrations (version) VALUES (:version)"),
+                    {"version": migration_name}
+                )
+                # Session automatically commits on context exit
                 
-                conn.commit()
-                cursor.close()
-                
-            logger.info(f"Migration {migration_name} applied successfully.")
+            logger.info(f"Migration {migration_name} applied successfully (SQLAlchemy)")
             
         except Exception as e:
             logger.error(f"Failed to apply migration {migration_name}: {e}")
