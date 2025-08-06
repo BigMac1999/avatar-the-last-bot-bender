@@ -39,4 +39,3 @@ class GameService:
             logger.error(f"Failed to onboard user {user_id} {username}: {e}")
             raise
 
-

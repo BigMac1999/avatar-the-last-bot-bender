@@ -33,7 +33,6 @@ class CharacterRepository:
             "character_id": userChar.character_id,
             "created_at": userChar.created_at
         }
-    
     async def get_all_characters(self) -> List[dict]:
         """
         Get all characters from database, returning serialized dictionaries.
@@ -125,7 +124,26 @@ class CharacterRepository:
             
             return CharConstants.SUCCESS, [self._serialize_user_character(user_char) for user_char in user_characters]
         
-        
+    async def get_users_roster(self, user_id: int) -> tuple[CharConstants, Optional[List[dict]]]:
+        """
+        Get all characters and details claimed by a single user (their roster)
+        """
+        with database_manager.get_db_session() as session:
+            user = session.query(User).filter_by(discord_id=user_id).first()
+            if not user:
+                return CharConstants.USER_NOT_FOUND, None
+            
+            # return CharConstants.SUCCESS, [self._serialize_user(user)]
+            characters = session.query(Character)\
+                .join(UserCharacter, Character.id == UserCharacter.character_id)\
+                .filter(UserCharacter.user_id == user.id)\
+                .all()
+            
+            if not characters:
+                return CharConstants.NOT_FOUND, None
+            
+            return CharConstants.SUCCESS, [self._serialize_character(char) for char in characters]
+                    
     async def set_character_to_user(self, user_id: int, character_id:int) -> tuple[CharConstants, Optional[dict]]:
         """
         Give a user claim to a character

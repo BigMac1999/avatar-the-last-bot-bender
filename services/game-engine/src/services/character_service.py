@@ -69,3 +69,11 @@ class CharacterService:
         except Exception as e:
             logger.error(f"Failed to remove character id {char_id} for user id {user_id} : {e}")
             raise
+    
+    async def get_users_roster(self, user_id: int) -> tuple[CharConstants, Optional[List[dict]]]:
+        """Get details for all characters claimed by a character"""
+        try:
+            return await self.character_repo.get_users_roster(user_id)
+        except Exception as e:
+            logger.error(f"Failed to retrieve roster for user id {user_id}: {e}")
+            raise

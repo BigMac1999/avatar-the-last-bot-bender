@@ -16,7 +16,7 @@ from constants.character_constants import CharConstants
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 game_service = GameService()
@@ -140,7 +140,7 @@ async def get_character_by_id(character_id: int):
 
 @app.get("/users/{user_id}/characters")
 async def get_user_characters(user_id: int):
-    """Fetch all characters claimed by a single character"""
+    """Fetch all characters ID claimed by a single user"""
     try:
         result_type, result_data = await char_service.get_all_user_characters(user_id)
         if result_type == CharConstants.SUCCESS:
@@ -180,11 +180,29 @@ async def unset_user_character(user_id: int, char_id: int):
     except Exception as e:
         return APIResponse.error(f"Failed to delete character id {char_id} for user {user_id}: {e}")
 
+@app.get("/users/{user_id}/roster")
+async def get_user_roster(user_id: int):
+    """Fetch all details for characters claimed by a single user"""
+    try:
+        result_type, result_data = await char_service.get_users_roster(user_id)
+        if result_type == CharConstants.SUCCESS:
+            return APIResponse.success(result_data)
+        elif result_type == CharConstants.NOT_FOUND:
+            return APIResponse.not_found(f"Characters for the user {user_id} were not found.")
+        elif result_type == CharConstants.USER_NOT_FOUND:
+            return APIResponse.not_found(f"User {user_id} was not found.")
+    except Exception as e:
+        return APIResponse.error(f"Failed to find characters for user {user_id}: {e}")
+    
+
 # BigMacs Todos
 # TODO: Implement the battle engine for the bot (Python)
-# TODO: Implement the character collection mechanism (SQL + Python)
-# TODO: Implement the roster command to return all characters (SQL + Python) 
+# TODO: Implement a test file to run endpoints to validate the battle engine (bash using curls)
+# DONE: Implement postman collection for local testing
+# DONE: Implement the character collection mechanism (SQL + Python)
+# DONE: Implement the roster command to return all characters (SQL + Python) 
 # TODO: Implement the stats command to return character stats (SQL + Python)
+# Next^ This involves a refactor of the user character table 
 # TODO: Implement 3rd party blob storage for character images (Python + MinIO or similar)
 # TODO: Implement the following stats to be returned for each character:
 # - User battles won
@@ -200,5 +218,5 @@ async def unset_user_character(user_id: int, char_id: int):
 # TODO: Implement the website command to link to the expected http://localhost:3001 endpoint for local dev for now (Python)
 
 # Both/Either TODOs
-# TODO: Implement the logic to onboard a new user to the bot (Python + SQL)
-# TODO: Begin to seed the database with characters (Python + SQL)
+# DONE: Implement the logic to onboard a new user to the bot (Python + SQL)
+# TODO INPROG: Begin to seed the database with characters (Python + SQL)
