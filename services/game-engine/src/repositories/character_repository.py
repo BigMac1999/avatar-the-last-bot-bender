@@ -7,12 +7,6 @@ from models.ability import Ability
 class CharacterRepository:
     """
     Repository for character-related database operations using SQLAlchemy ORM.
-    
-    Key ORM concepts you'll learn:
-    - session.query() vs raw SQL
-    - .all(), .first(), .filter() methods
-    - Relationships and eager loading with joinedload()
-    - Type hints with SQLAlchemy models
     """
     
     def _serialize_character(self, character: Character) -> dict:

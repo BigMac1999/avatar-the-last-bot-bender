@@ -1,14 +1,23 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from contextlib import asynccontextmanager
+
+from fastapi.responses import JSONResponse
+from fastapi import HTTPException, Response, status
 from database.connection import database_manager
 from database.migrations import MigrationRunner
 from repositories.character_repository import CharacterRepository
+from repositories.user_repository import UserRepository
+from services.game_service import GameService
+from utils.response import APIResponse
+from constants.user_constants import UserOnboardResult, UserConstants
 
 import logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+game_service = GameService()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -41,36 +50,72 @@ app = FastAPI(
 @app.get("/ping")
 async def ping():
     """Health check endpoint"""
-    return {"status": "ok", "message": "Game Engine is running"}
+    health_dict = {"status": "ok", "message": "Game Engine is running"}
+    return APIResponse.success(health_dict)
 
 @app.get("/health")
 async def health_check():
     """Health check with database connection status"""
     health_status = await database_manager.health_check()
-    return {
+    health_dict =  {
         "status": health_status.get("status", "unknown"),
         "message": health_status.get("message", "No message provided"),
         "test_query": health_status.get("test_query", "not executed")
     }
+    return APIResponse.success(health_dict)
     
 @app.get("/migrations")
 async def migration_status():
     """Get migration status"""
     migration_runner = MigrationRunner(database_manager)
     status = await migration_runner.get_migration_status()
-    return status
+    return APIResponse.success(status)
 
+"""User-related endpoints"""
+@app.get("/users")
+async def get_all_users():
+    """Fetch all users from the database"""
+    try:
+        get_all_users_result = await game_service.get_all_users()
+        
+        if get_all_users_result != []:
+            return APIResponse.success(get_all_users_result)
+        return APIResponse.not_found("No users found")
+    except Exception:
+        return APIResponse.error("Failed to get all users")
 
-# TODO: Add error handling for endpoints
-# Currently, if an endpoint call has an error, it still returns a 200 status code
-# TODO: Update migrations and sql tables today to handle more robust logic
+@app.get("/users/{user_id}")
+async def get_user(user_id: int):
+    """Fetch a user by ID"""
+    try:
+        get_user_result = await game_service.get_user_by_id(user_id)
+        if get_user_result is not None: 
+            return APIResponse.success(get_user_result)
+        return APIResponse.not_found("User not found")
+    except Exception:
+        return APIResponse.error(f"Failed to fetch user {user_id}")
+
+@app.post("/users/{user_id}")
+async def add_user(
+    user_id: int, 
+    username: str):
+    """Add a user"""
+    try:
+        result_type, add_user_result = await game_service.onboard_user(user_id, username)
+        if result_type == UserOnboardResult.CREATED:
+            return APIResponse.success(add_user_result)
+        elif result_type == UserOnboardResult.ALREADY_EXISTS:
+            return APIResponse.conflict("User already exists")
+    except Exception:
+        return APIResponse.error(f"Failed to add user {user_id} {username}")
+
 """Character-related endpoints (currently only for validation)"""
 
 @app.get("/characters")
 async def get_all_characters():
     """Fetch all characters from the database"""
     result = await CharacterRepository().get_all_characters()
-    return result
+    return APIResponse.success(result)
 
 @app.get("/characters/{character_name}")
 async def get_character_by_name(character_name: str):
@@ -78,15 +123,14 @@ async def get_character_by_name(character_name: str):
     result = await CharacterRepository().get_character_by_name(character_name)
     if result:
         # Repository already returns serialized dict
-        return result
-    return {"error": "Character not found"}
+        return APIResponse.success(result)
+    return APIResponse.error("Character not found")
 
 """Future user-related endpoints (currently commented out)"""
 
 
 # BigMacs Todos
 # TODO: Implement the battle engine for the bot (Python)
-# TODO: Implement a test file to run endpoints to validate the battle engine (bash using curls)
 # TODO: Implement the character collection mechanism (SQL + Python)
 # TODO: Implement the roster command to return all characters (SQL + Python) 
 # TODO: Implement the stats command to return character stats (SQL + Python)
