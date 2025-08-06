@@ -8,8 +8,10 @@ from database.migrations import MigrationRunner
 from repositories.character_repository import CharacterRepository
 from repositories.user_repository import UserRepository
 from services.game_service import GameService
+from services.character_service import CharacterService
 from utils.response import APIResponse
 from constants.user_constants import UserOnboardResult, UserConstants
+from constants.character_constants import CharConstants
 
 import logging
 
@@ -18,6 +20,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 game_service = GameService()
+char_service = CharacterService()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -109,25 +112,73 @@ async def add_user(
     except Exception:
         return APIResponse.error(f"Failed to add user {user_id} {username}")
 
-"""Character-related endpoints (currently only for validation)"""
+"""Character-related endpoints"""
 
 @app.get("/characters")
 async def get_all_characters():
     """Fetch all characters from the database"""
-    result = await CharacterRepository().get_all_characters()
+    result = await char_service.get_all_characters()
     return APIResponse.success(result)
 
-@app.get("/characters/{character_name}")
+@app.get("/characters/name/{character_name}")
 async def get_character_by_name(character_name: str):
     """Fetch a character by name"""
-    result = await CharacterRepository().get_character_by_name(character_name)
+    result = await char_service.get_char_by_name(character_name)
     if result:
-        # Repository already returns serialized dict
         return APIResponse.success(result)
     return APIResponse.error("Character not found")
 
-"""Future user-related endpoints (currently commented out)"""
+@app.get("/characters/id/{character_id}")
+async def get_character_by_id(character_id: int):
+    """Fetch a character by id"""
+    result = await char_service.get_char_by_id(character_id)
+    if result: 
+        return APIResponse.success(result)
+    return APIResponse.error("Character not found")
 
+"""User-Character Related endpoints"""
+
+@app.get("/users/{user_id}/characters")
+async def get_user_characters(user_id: int):
+    """Fetch all characters claimed by a single character"""
+    try:
+        result_type, result_data = await char_service.get_all_user_characters(user_id)
+        if result_type == CharConstants.SUCCESS:
+            return APIResponse.success(result_data)
+        elif result_type == CharConstants.NOT_FOUND:
+            return APIResponse.not_found(f"Characters for the user {user_id} were not found.")
+        elif result_type == CharConstants.USER_NOT_FOUND:
+            return APIResponse.not_found(f"User {user_id} was not found.")
+    except Exception as e:
+        return APIResponse.error(f"Failed to find characters for user {user_id}: {e}")
+    
+@app.post("/users/{user_id}/characters")
+async def set_user_character(user_id: int, character_id: int):
+    """Set a character for a user""" 
+    try:
+        result_type, result_data = await char_service.set_new_user_character(user_id=user_id, char_id=character_id)
+        if result_type == CharConstants.SUCCESS:
+            return APIResponse.success(result_data)
+        elif result_type == CharConstants.ALREADY_EXISTS:
+            return APIResponse.not_found(f"Character {character_id} for the user {user_id} already existed.")
+        elif result_type == CharConstants.USER_NOT_FOUND:
+            return APIResponse.not_found(f"User {user_id} was not found to add character {character_id} to.")
+    except Exception as e:
+        return APIResponse.error(f"Failed to set character id {character_id} for user {user_id}: {e}")
+    
+@app.delete("/users/{user_id}/characters")
+async def unset_user_character(user_id: int, char_id: int):
+    """Remove a character for a user"""
+    try:
+        result_type, result_data = await char_service.unset_user_character(user_id=user_id, char_id=char_id)
+        if result_type == CharConstants.SUCCESS:
+            return APIResponse.success(result_data)
+        elif result_type == CharConstants.USER_NOT_FOUND:
+            return APIResponse.not_found(f"User {user_id} was not found to add character {char_id} to.")
+        elif result_type == CharConstants.NOT_FOUND:
+            return APIResponse.not_found(f"Character id {char_id} was not found under user id {user_id} to delete.")
+    except Exception as e:
+        return APIResponse.error(f"Failed to delete character id {char_id} for user {user_id}: {e}")
 
 # BigMacs Todos
 # TODO: Implement the battle engine for the bot (Python)

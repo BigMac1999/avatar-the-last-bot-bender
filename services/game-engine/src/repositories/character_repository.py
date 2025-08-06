@@ -3,6 +3,9 @@ from sqlalchemy.orm import joinedload
 from database.connection import database_manager
 from models.character import Character
 from models.ability import Ability
+from models.user import User
+from models.user_character import UserCharacter
+from constants.character_constants import CharConstants
 
 class CharacterRepository:
     """
@@ -22,18 +25,18 @@ class CharacterRepository:
             "created_at": character.created_at.isoformat() if character.created_at is not None else None
         }
     
+    def _serialize_user_character(self, userChar: UserCharacter) -> dict:
+        """Helper method to serialize a UserCharacter object to dictionary"""
+        return {
+            "id": userChar.id,
+            "user_id": userChar.user_id,
+            "character_id": userChar.character_id,
+            "created_at": userChar.created_at
+        }
+    
     async def get_all_characters(self) -> List[dict]:
         """
         Get all characters from database, returning serialized dictionaries.
-        
-        Old way: cursor.execute("SELECT * FROM characters")
-        New way: session.query(Character).all()
-        
-        Benefits:
-        - Returns Python objects instead of tuples
-        - Automatic type conversion
-        - IDE autocomplete and type checking
-        - Serialized while session is active
         """
         with database_manager.get_db_session() as session:
             characters = session.query(Character).all()
@@ -44,15 +47,6 @@ class CharacterRepository:
     async def get_character_by_name(self, character_name: str) -> Optional[dict]:
         """
         Get character by name, returning a dictionary for JSON serialization.
-        
-        Old way: "SELECT * FROM characters WHERE name = %s"
-        New way: session.query(Character).filter(Character.name == character_name).first()
-        
-        Benefits:
-        - No SQL injection risks (automatic parameter binding)
-        - Column names are checked at development time
-        - Returns None instead of empty result
-        - Serializes to dict while session is active (avoids DetachedInstanceError)
         """
         with database_manager.get_db_session() as session:
             character = session.query(Character).filter(Character.name == character_name).first()
@@ -86,11 +80,6 @@ class CharacterRepository:
     async def get_character_with_abilities(self, character_id: int) -> Optional[dict]:
         """
         Get character with all their abilities loaded.
-        
-        Key concept: Eager Loading
-        - joinedload() prevents N+1 query problem
-        - Loads related data in single query instead of multiple
-        - Old way would require separate queries or complex JOINs
         """
         with database_manager.get_db_session() as session:
             character = session.query(Character)\
@@ -117,61 +106,126 @@ class CharacterRepository:
             ]
             return char_data
         
-                        # .options(joinedload(Character.character_abilities).joinedload(Character.abilities))\
-
-    
-    async def create_character(self, name: str, element: str, rarity: int, hp: int, attack: int, description: str = "") -> dict:
+        
+    async def get_users_characters(self, user_id: int) -> tuple[CharConstants, Optional[List[dict]]]:
         """
-        Create new character.
-        
-        Old way: "INSERT INTO characters (...) VALUES (...) RETURNING *"
-        New way: Create object, add to session, commit
-        
-        Benefits:
-        - Validation happens in Python (model constraints)
-        - Object is immediately usable after creation
-        - Relationships can be set up easily
+        Get all characters claimed by a single user
         """
         with database_manager.get_db_session() as session:
-            character = Character(
-                name=name,
-                element=element, 
-                rarity=rarity,
-                hp=hp,
-                attack=attack,
-                description=description
-            )
-            session.add(character)
-            session.flush()  # Get the ID without committing
-            session.refresh(character)  # Refresh to get generated fields
-            return self._serialize_character(character)
-    
-    async def update_character(self, character_id: int, **updates) -> Optional[dict]:
-        """
-        Update character fields.
+            user = session.query(User).filter_by(discord_id=user_id).first()
+            if not user:
+                return CharConstants.USER_NOT_FOUND, None
+            
+            user_characters = session.query(UserCharacter)\
+                .filter(UserCharacter.user_id == user.id)\
+                .all()
+                
+            if not user_characters:
+                return CharConstants.NOT_FOUND, None
+            
+            return CharConstants.SUCCESS, [self._serialize_user_character(user_char) for user_char in user_characters]
         
-        Demonstrates partial updates using **kwargs
+        
+    async def set_character_to_user(self, user_id: int, character_id:int) -> tuple[CharConstants, Optional[dict]]:
+        """
+        Give a user claim to a character
         """
         with database_manager.get_db_session() as session:
-            character = session.get(Character, character_id)
-            if not character:
-                return None
+            user = session.query(User).filter_by(discord_id=user_id).first()
+            if not user:
+                return CharConstants.USER_NOT_FOUND, None
             
-            # Update only provided fields
-            for field, value in updates.items():
-                if hasattr(character, field):
-                    setattr(character, field, value)
+            userChar = session.query(UserCharacter)\
+            .filter(UserCharacter.user_id == user.id, 
+                    UserCharacter.character_id == character_id)\
+            .first()
             
-            session.flush()
-            session.refresh(character)
-            return self._serialize_character(character)
-    
-    async def delete_character(self, character_id: int) -> bool:
-        """Delete character by ID."""
+            if userChar:
+                return CharConstants.ALREADY_EXISTS, None
+            
+            #Add new record
+            
+            userChar = UserCharacter(user_id=user.id, character_id=character_id)
+            session.add(userChar)
+            session.commit()
+            session.refresh(userChar)
+            
+            return CharConstants.SUCCESS, self._serialize_user_character(userChar)
+            
+    async def unset_character_to_user(self, user_id: int, char_id: int) -> tuple[CharConstants, Optional[dict]]:
+        """
+        Unset/Remove a character from a user
+        """
         with database_manager.get_db_session() as session:
-            character = session.get(Character, character_id)
-            if not character:
-                return False
+            user = session.query(User).filter_by(discord_id=user_id).first()
+            if not user:
+                return CharConstants.USER_NOT_FOUND, None
             
-            session.delete(character)
-            return True
+            userChar = session.query(UserCharacter)\
+                .filter(UserCharacter.user_id == user.id, 
+                    UserCharacter.character_id == char_id)\
+                .first()
+            
+            if not userChar:
+                return CharConstants.NOT_FOUND, None
+            
+            session.delete(userChar)
+            return CharConstants.SUCCESS, userChar
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    """These methods currently unused since we spin up db to often, this will be implemented post MVP"""
+    # async def create_character(self, name: str, element: str, rarity: int, hp: int, attack: int, description: str = "") -> dict:
+    #     """
+    #     Create new character.
+    #     """
+    #     with database_manager.get_db_session() as session:
+    #         character = Character(
+    #             name=name,
+    #             element=element, 
+    #             rarity=rarity,
+    #             hp=hp,
+    #             attack=attack,
+    #             description=description
+    #         )
+    #         session.add(character)
+    #         session.flush()  # Get the ID without committing
+    #         session.refresh(character)  # Refresh to get generated fields
+    #         return self._serialize_character(character)
+    
+    # async def update_character(self, character_id: int, **updates) -> Optional[dict]:
+    #     """
+    #     Update character fields.
+    #     """
+    #     with database_manager.get_db_session() as session:
+    #         character = session.get(Character, character_id)
+    #         if not character:
+    #             return None
+            
+    #         # Update only provided fields
+    #         for field, value in updates.items():
+    #             if hasattr(character, field):
+    #                 setattr(character, field, value)
+            
+    #         session.flush()
+    #         session.refresh(character)
+    #         return self._serialize_character(character)
+    
+    # async def delete_character(self, character_id: int) -> bool:
+    #     """Delete character by ID."""
+    #     with database_manager.get_db_session() as session:
+    #         character = session.get(Character, character_id)
+    #         if not character:
+    #             return False
+            
+    #         session.delete(character)
+    #         return True
