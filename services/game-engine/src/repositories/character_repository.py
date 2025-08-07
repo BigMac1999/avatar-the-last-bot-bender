@@ -5,64 +5,15 @@ from models.character import Character
 from models.ability import Ability
 from models.user import User
 from models.user_character import UserCharacter
-from constants.character_constants import CharConstants
+from utils.constants import Constants
+from utils.serializers import Serializer
 
 class CharacterRepository:
     """
     Repository for character-related database operations using SQLAlchemy ORM.
     """
     
-    def _serialize_character(self, character: Character) -> dict:
-        """Helper method to serialize a Character object to dictionary"""
-        return {
-            "id": character.id,
-            "name": character.name,
-            "element": character.element,
-            "rarity": character.rarity,
-            "hp": character.hp,
-            "attack": character.attack,
-            "description": character.description,
-            "created_at": character.created_at.isoformat() if character.created_at is not None else None
-        }
-    
-    def _serialize_user_character(self, userChar: UserCharacter) -> dict:
-        """Helper method to serialize a UserCharacter object to dictionary"""
-        return {
-            "id": userChar.id,
-            "user_id": userChar.user_id,
-            "character_id": userChar.character_id,
-            "current_hp": userChar.current_hp,
-            "current_attack": userChar.current_attack,
-            "level": userChar.level,
-            "experience": userChar.experience,
-            "created_at": userChar.created_at
-        }
-        
-    def _serialize_user_roster(self, userChar: UserCharacter) -> dict:
-        """Helper method to serialize the roster to a dictionary"""
-        return {
-            "id": userChar.id,
-            "user_id": userChar.user_id,
-            "character_id": userChar.character_id,
-
-            # Character base info
-            "name": userChar.character.name,
-            "element": userChar.character.element,
-            "rarity": userChar.character.rarity,
-            "description": userChar.character.description,
-
-            # User-specific stats (current instance)
-            "current_hp": userChar.current_hp,
-            "current_attack": userChar.current_attack,
-            "level": userChar.level,
-            "experience": userChar.experience,
-
-            # Base stats for reference (optional)
-            "base_hp": userChar.character.hp,
-            "base_attack": userChar.character.attack,
-
-            "created_at": userChar.created_at
-        }
+    serializer = Serializer()
     
     async def get_all_characters(self) -> List[dict]:
         """
@@ -72,7 +23,7 @@ class CharacterRepository:
             characters = session.query(Character).all()
             
             # Serialize all characters while session is active
-            return [self._serialize_character(char) for char in characters]
+            return [self.serializer.serialize_character(char) for char in characters]
     
     async def get_character_by_name(self, character_name: str) -> Optional[dict]:
         """
@@ -84,7 +35,7 @@ class CharacterRepository:
                 return None
             
             # Serialize while session is active
-            return self._serialize_character(character)
+            return self.serializer.serialize_character(character)
     
     async def get_character_by_id(self, character_id: int) -> Optional[dict]:
         """Get character by ID - demonstrates primary key lookup."""
@@ -93,7 +44,7 @@ class CharacterRepository:
             character = session.get(Character, character_id)
             if not character:
                 return None
-            return self._serialize_character(character)
+            return self.serializer.serialize_character(character)
     
     async def get_characters_by_element(self, element: str) -> List[dict]:
         """
@@ -105,7 +56,7 @@ class CharacterRepository:
                 .filter(Character.element == element)\
                 .order_by(Character.rarity.desc(), Character.name)\
                 .all()
-            return [self._serialize_character(char) for char in characters]
+            return [self.serializer.serialize_character(char) for char in characters]
     
     async def get_character_with_abilities(self, character_id: int) -> Optional[dict]:
         """
@@ -121,7 +72,7 @@ class CharacterRepository:
                 return None
                 
             # Serialize character with abilities
-            char_data = self._serialize_character(character)
+            char_data = self.serializer.serialize_character(character)
             char_data["abilities"] = [
                 {
                     "id": ca.ability.id,
@@ -137,32 +88,32 @@ class CharacterRepository:
             return char_data
         
         
-    async def get_users_characters(self, user_id: int) -> tuple[CharConstants, Optional[List[dict]]]:
+    async def get_users_characters(self, user_id: int) -> tuple[Constants, Optional[List[dict]]]:
         """
         Get all characters claimed by a single user
         """
         with database_manager.get_db_session() as session:
             user = session.query(User).filter_by(discord_id=user_id).first()
             if not user:
-                return CharConstants.USER_NOT_FOUND, None
+                return Constants.USER_NOT_FOUND, None
             
             user_characters = session.query(UserCharacter)\
                 .filter(UserCharacter.user_id == user.id)\
                 .all()
                 
             if not user_characters:
-                return CharConstants.NOT_FOUND, None
+                return Constants.NOT_FOUND, None
             
-            return CharConstants.SUCCESS, [self._serialize_user_character(user_char) for user_char in user_characters]
+            return Constants.SUCCESS, [self.serializer.serialize_user_character(user_char) for user_char in user_characters]
         
-    async def get_users_roster(self, user_id: int) -> tuple[CharConstants, Optional[List[dict]]]:
+    async def get_users_roster(self, user_id: int) -> tuple[Constants, Optional[List[dict]]]:
         """
         Get all characters and details claimed by a single user (their roster)
         """
         with database_manager.get_db_session() as session:
             user = session.query(User).filter_by(discord_id=user_id).first()
             if not user:
-                return CharConstants.USER_NOT_FOUND, None
+                return Constants.USER_NOT_FOUND, None
             
             characters = session.query(UserCharacter)\
                 .options(joinedload(UserCharacter.character))\
@@ -170,18 +121,18 @@ class CharacterRepository:
                 .all()
                                 
             if not characters:
-                return CharConstants.NOT_FOUND, None
+                return Constants.NOT_FOUND, None
             
-            return CharConstants.SUCCESS, [self._serialize_user_roster(char) for char in characters]
+            return Constants.SUCCESS, [self.serializer.serialize_user_roster(char) for char in characters]
                     
-    async def set_character_to_user(self, user_id: int, character_id:int) -> tuple[CharConstants, Optional[dict]]:
+    async def set_character_to_user(self, user_id: int, character_id:int) -> tuple[Constants, Optional[dict]]:
         """
         Give a user claim to a character
         """
         with database_manager.get_db_session() as session:
             user = session.query(User).filter_by(discord_id=user_id).first()
             if not user:
-                return CharConstants.USER_NOT_FOUND, None
+                return Constants.USER_NOT_FOUND, None
             
             userChar = session.query(UserCharacter)\
                 .filter(UserCharacter.user_id == user.id, 
@@ -189,14 +140,14 @@ class CharacterRepository:
                 .first()
             
             if userChar:
-                return CharConstants.ALREADY_EXISTS, None
+                return Constants.ALREADY_EXISTS, None
 
             baseChar = session.query(Character)\
                 .filter(Character.id == character_id)\
                 .first()
                 
             if not baseChar:
-                return CharConstants.NOT_FOUND, None
+                return Constants.NOT_FOUND, None
             
             userChar = UserCharacter(user_id=user.id, 
                                      character_id=character_id,
@@ -206,27 +157,29 @@ class CharacterRepository:
             session.commit()
             session.refresh(userChar)
             
-            return CharConstants.SUCCESS, self._serialize_user_character(userChar)
+            return Constants.SUCCESS, self.serializer.serialize_user_character(userChar)
             
-    async def unset_character_to_user(self, user_id: int, char_id: int) -> tuple[CharConstants, Optional[dict]]:
+    async def unset_character_to_user(self, user_id: int, character_id: int) -> tuple[Constants, Optional[dict]]:
         """
         Unset/Remove a character from a user
         """
         with database_manager.get_db_session() as session:
             user = session.query(User).filter_by(discord_id=user_id).first()
             if not user:
-                return CharConstants.USER_NOT_FOUND, None
+                return Constants.USER_NOT_FOUND, None
             
             userChar = session.query(UserCharacter)\
                 .filter(UserCharacter.user_id == user.id, 
-                    UserCharacter.character_id == char_id)\
+                    UserCharacter.character_id == character_id)\
                 .first()
             
             if not userChar:
-                return CharConstants.NOT_FOUND, None
+                return Constants.NOT_FOUND, None
             
             session.delete(userChar)
-            return CharConstants.SUCCESS, userChar
+            return Constants.SUCCESS, userChar
+        
+    
         
         
         

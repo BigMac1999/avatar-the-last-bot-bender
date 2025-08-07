@@ -10,8 +10,7 @@ from repositories.user_repository import UserRepository
 from services.game_service import GameService
 from services.character_service import CharacterService
 from utils.response import APIResponse
-from constants.user_constants import UserOnboardResult, UserConstants
-from constants.character_constants import CharConstants
+from utils.constants import Constants
 
 import logging
 
@@ -105,9 +104,9 @@ async def add_user(
     """Add a user"""
     try:
         result_type, add_user_result = await game_service.onboard_user(user_id, username)
-        if result_type == UserOnboardResult.CREATED:
+        if result_type == Constants.CREATED:
             return APIResponse.success(add_user_result)
-        elif result_type == UserOnboardResult.ALREADY_EXISTS:
+        elif result_type == Constants.ALREADY_EXISTS:
             return APIResponse.conflict("User already exists")
     except Exception:
         return APIResponse.error(f"Failed to add user {user_id} {username}")
@@ -143,11 +142,11 @@ async def get_user_characters(user_id: int):
     """Fetch all characters ID claimed by a single user"""
     try:
         result_type, result_data = await char_service.get_all_user_characters(user_id)
-        if result_type == CharConstants.SUCCESS:
+        if result_type == Constants.SUCCESS:
             return APIResponse.success(result_data)
-        elif result_type == CharConstants.NOT_FOUND:
+        elif result_type == Constants.NOT_FOUND:
             return APIResponse.not_found(f"Characters for the user {user_id} were not found.")
-        elif result_type == CharConstants.USER_NOT_FOUND:
+        elif result_type == Constants.USER_NOT_FOUND:
             return APIResponse.not_found(f"User {user_id} was not found.")
     except Exception as e:
         return APIResponse.error(f"Failed to find characters for user {user_id}: {e}")
@@ -156,40 +155,40 @@ async def get_user_characters(user_id: int):
 async def set_user_character(user_id: int, character_id: int):
     """Set a character for a user""" 
     try:
-        result_type, result_data = await char_service.set_new_user_character(user_id=user_id, char_id=character_id)
-        if result_type == CharConstants.SUCCESS:
+        result_type, result_data = await char_service.set_new_user_character(user_id=user_id, character_id=character_id)
+        if result_type == Constants.SUCCESS:
             return APIResponse.success(result_data)
-        elif result_type == CharConstants.ALREADY_EXISTS:
+        elif result_type == Constants.ALREADY_EXISTS:
             return APIResponse.not_found(f"Character {character_id} for the user {user_id} already existed.")
-        elif result_type == CharConstants.USER_NOT_FOUND:
+        elif result_type == Constants.USER_NOT_FOUND:
             return APIResponse.not_found(f"User {user_id} was not found to add character {character_id} to.")
     except Exception as e:
         return APIResponse.error(f"Failed to set character id {character_id} for user {user_id}: {e}")
     
 @app.delete("/users/{user_id}/characters")
-async def unset_user_character(user_id: int, char_id: int):
+async def unset_user_character(user_id: int, character_id: int):
     """Remove a character for a user"""
     try:
-        result_type, result_data = await char_service.unset_user_character(user_id=user_id, char_id=char_id)
-        if result_type == CharConstants.SUCCESS:
+        result_type, result_data = await char_service.unset_user_character(user_id=user_id, character_id=character_id)
+        if result_type == Constants.SUCCESS:
             return APIResponse.success(result_data)
-        elif result_type == CharConstants.USER_NOT_FOUND:
-            return APIResponse.not_found(f"User {user_id} was not found to add character {char_id} to.")
-        elif result_type == CharConstants.NOT_FOUND:
-            return APIResponse.not_found(f"Character id {char_id} was not found under user id {user_id} to delete.")
+        elif result_type == Constants.USER_NOT_FOUND:
+            return APIResponse.not_found(f"User {user_id} was not found to add character {character_id} to.")
+        elif result_type == Constants.NOT_FOUND:
+            return APIResponse.not_found(f"Character id {character_id} was not found under user id {user_id} to delete.")
     except Exception as e:
-        return APIResponse.error(f"Failed to delete character id {char_id} for user {user_id}: {e}")
+        return APIResponse.error(f"Failed to delete character id {character_id} for user {user_id}: {e}")
 
 @app.get("/users/{user_id}/roster")
 async def get_user_roster(user_id: int):
     """Fetch all details for characters claimed by a single user"""
     try:
         result_type, result_data = await char_service.get_users_roster(user_id)
-        if result_type == CharConstants.SUCCESS:
+        if result_type == Constants.SUCCESS:
             return APIResponse.success(result_data)
-        elif result_type == CharConstants.NOT_FOUND:
+        elif result_type == Constants.NOT_FOUND:
             return APIResponse.not_found(f"Characters for the user {user_id} were not found.")
-        elif result_type == CharConstants.USER_NOT_FOUND:
+        elif result_type == Constants.USER_NOT_FOUND:
             return APIResponse.not_found(f"User {user_id} was not found.")
     except Exception as e:
         return APIResponse.error(f"Failed to find characters for user {user_id}: {e}")

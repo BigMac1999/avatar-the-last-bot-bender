@@ -1,7 +1,7 @@
 from repositories.character_repository import CharacterRepository
 from fastapi import HTTPException, Response, status
 from fastapi.responses import JSONResponse
-from constants.character_constants import CharConstants
+from utils.constants import Constants
 from typing import Any, Optional, List
 
 import logging
@@ -13,6 +13,10 @@ class CharacterService:
     Service class for character-related operations, including retrieval
     """
     character_repo = CharacterRepository()
+    
+    
+    """Getter Methods"""
+
 
     async def get_all_characters(self):
         """Get all characters"""
@@ -30,12 +34,12 @@ class CharacterService:
             logger.error(f"Failed to retrieve character {char_name}: {e}")
             raise
             
-    async def get_char_by_id(self, char_id: int):
+    async def get_char_by_id(self, character_id: int):
         """Get character by ID"""
         try:
-            return await self.character_repo.get_character_by_id(char_id)
+            return await self.character_repo.get_character_by_id(character_id)
         except Exception as e:
-            logger.error(f"Failed to retrieve character ID {char_id}: {e}")
+            logger.error(f"Failed to retrieve character ID {character_id}: {e}")
             raise
             
     async def get_all_char_of_element(self, element: str):
@@ -46,34 +50,42 @@ class CharacterService:
             logger.error(f"Failed to retrieve all characters of element {element}: {e}")
             raise
 
-    async def get_all_user_characters(self, user_id:int) -> tuple[CharConstants, Optional[List[dict]]]:
+    async def get_all_user_characters(self, user_id:int) -> tuple[Constants, Optional[List[dict]]]:
         """Get all characters claimed by one user"""
         try:
             return await self.character_repo.get_users_characters(user_id)
         except Exception as e:
             logger.error(f"Failed to retrieve all characters of user {user_id}: {e}")
             raise
-            
-    async def set_new_user_character(self, user_id: int, char_id: int):
-        """ Set a character for a user"""
-        try:
-            return await self.character_repo.set_character_to_user(user_id, char_id)
-        except Exception as e:
-            logger.error(f"Failed to set character id {char_id} for user id {user_id} : {e}")
-            raise
         
-    async def unset_user_character(self, user_id: int, char_id: int):
-        """Remove a character from a user"""
-        try:
-            return await self.character_repo.unset_character_to_user(user_id, char_id)
-        except Exception as e:
-            logger.error(f"Failed to remove character id {char_id} for user id {user_id} : {e}")
-            raise
-    
-    async def get_users_roster(self, user_id: int) -> tuple[CharConstants, Optional[List[dict]]]:
+    async def get_users_roster(self, user_id: int) -> tuple[Constants, Optional[List[dict]]]:
         """Get details for all characters claimed by a character"""
         try:
             return await self.character_repo.get_users_roster(user_id)
         except Exception as e:
             logger.error(f"Failed to retrieve roster for user id {user_id}: {e}")
             raise
+        
+        
+    """Setter Methods"""
+            
+            
+    async def set_new_user_character(self, user_id: int, character_id: int):
+        """ Set a character for a user"""
+        try:
+            return await self.character_repo.set_character_to_user(user_id, character_id)
+        except Exception as e:
+            logger.error(f"Failed to set character id {character_id} for user id {user_id} : {e}")
+            raise
+        
+    async def unset_user_character(self, user_id: int, character_id: int):
+        """Remove a character from a user"""
+        try:
+            return await self.character_repo.unset_character_to_user(user_id, character_id)
+        except Exception as e:
+            logger.error(f"Failed to remove character id {character_id} for user id {user_id} : {e}")
+            raise
+    
+    async def increase_exp(self, user_id: int, character_id: int, exp: int):
+        """Increase the EXP of a character and level up if needed."""
+        
