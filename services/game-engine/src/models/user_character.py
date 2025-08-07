@@ -18,10 +18,11 @@ class UserCharacter(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     character_id = Column(Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False, index=True)
     
-    # You could add additional fields here like:
-    # level = Column(Integer, default=1)
-    # experience = Column(Integer, default=0)
-    # acquired_at = Column(DateTime(timezone=True), server_default=func.now())
+    current_hp = Column(Integer, nullable=False)
+    current_attack = Column(Integer, nullable=False)
+    level = Column(Integer, default=1)
+    experience = Column(Integer, default=0)
+    acquired_at = Column(DateTime(timezone=True), server_default=func.now())
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
