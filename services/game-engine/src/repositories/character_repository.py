@@ -125,6 +125,28 @@ class CharacterRepository:
             
             return Constants.SUCCESS, [self.serializer.serialize_user_roster(char) for char in characters]
                     
+    async def get_single_user_character(self, user_id: int, character_id: int) -> tuple[Constants, Optional[dict]]:
+        """
+        Get the details of a single character claimed by a single user
+        """
+        with database_manager.get_db_session() as session:
+            user = session.query(User).filter_by(discord_id=user_id).first()
+            if not user:
+                return Constants.USER_NOT_FOUND, None
+            
+            character = session.query(UserCharacter)\
+                .filter(UserCharacter.user_id == user_id,
+                        UserCharacter.character_id == character_id)\
+                .first()
+            
+            if not character:
+                return Constants.NOT_FOUND, None
+            
+            return Constants.SUCCESS, self.serializer.serialize_user_character(character) 
+
+    """Setter Methods"""
+    
+                
     async def set_character_to_user(self, user_id: int, character_id:int) -> tuple[Constants, Optional[dict]]:
         """
         Give a user claim to a character
@@ -159,6 +181,36 @@ class CharacterRepository:
             
             return Constants.SUCCESS, self.serializer.serialize_user_character(userChar)
             
+    async def update_users_character(self, user_id: int, character_id: int, **updates) -> tuple[Constants, Optional[dict]]:
+        """
+        Update a user's character stats
+        """    
+        
+        with database_manager.get_db_session() as session:
+            user = session.query(User).filter_by(discord_id=user_id).first()
+            if not user:
+                return Constants.USER_NOT_FOUND, None
+            
+            userChar = session.query(UserCharacter)\
+                .filter(UserCharacter.user_id == user.id, 
+                    UserCharacter.character_id == character_id)\
+                .first()
+            
+            if not userChar:
+                return Constants.NOT_FOUND, None
+            
+            for field, value in updates.items():
+                if hasattr(userChar, field):
+                    setattr(userChar, field, value)
+                else:
+                    return Constants.INTERNAL_SERVER_ERROR, None
+                
+            session.commit()
+            session.refresh(userChar)
+            
+            return Constants.SUCCESS, self.serializer.serialize_user_character(userChar)
+
+    
     async def unset_character_to_user(self, user_id: int, character_id: int) -> tuple[Constants, Optional[dict]]:
         """
         Unset/Remove a character from a user

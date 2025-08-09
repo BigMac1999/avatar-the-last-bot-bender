@@ -9,6 +9,7 @@ from repositories.character_repository import CharacterRepository
 from repositories.user_repository import UserRepository
 from services.game_service import GameService
 from services.character_service import CharacterService
+from services.battle_service import BattleService
 from utils.response import APIResponse
 from utils.constants import Constants
 
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 game_service = GameService()
 char_service = CharacterService()
+battle_service = BattleService()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -135,6 +137,20 @@ async def get_character_by_id(character_id: int):
         return APIResponse.success(result)
     return APIResponse.error("Character not found")
 
+@app.get("/characters/test/{user_id}/{character_id}/xp/{xp}")
+async def test_add_xp_to_user(user_id:int, character_id: int, xp: int):
+    """Test method to add XP to a user's character"""
+    try:
+        result_type, result_data = await battle_service.increase_exp(user_id, character_id, xp)
+        if result_type == Constants.SUCCESS:
+            return APIResponse.success(result_data)
+        elif result_type == Constants.NOT_FOUND:
+            return APIResponse.not_found(f"Unable to find character {character_id} for user {user_id}")
+        elif result_type == Constants.USER_NOT_FOUND:
+            return APIResponse.not_found(f"User {user_id} was not found.")
+    except Exception as e:
+        return APIResponse.error(f"Failed to add xp {xp} for character {character_id} for user {user_id}: {e}")
+
 """User-Character Related endpoints"""
 
 @app.get("/users/{user_id}/characters")
@@ -193,6 +209,10 @@ async def get_user_roster(user_id: int):
     except Exception as e:
         return APIResponse.error(f"Failed to find characters for user {user_id}: {e}")
     
+"""Battle Related Endpoints"""
+
+# @app.get("/battle/test/xp/{xp}/")
+# async def battle(
 
 # BigMacs Todos
 # TODO: Implement the battle engine for the bot (Python)
@@ -200,8 +220,7 @@ async def get_user_roster(user_id: int):
 # DONE: Implement postman collection for local testing
 # DONE: Implement the character collection mechanism (SQL + Python)
 # DONE: Implement the roster command to return all characters (SQL + Python) 
-# TODO: Implement the stats command to return character stats (SQL + Python)
-# Next^ This involves a refactor of the user character table 
+# DONE: Implement the stats command to return basic character stats (SQL + Python)
 # TODO: Implement 3rd party blob storage for character images (Python + MinIO or similar)
 # TODO: Implement the following stats to be returned for each character:
 # - User battles won

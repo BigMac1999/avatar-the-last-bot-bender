@@ -1,7 +1,7 @@
 from repositories.user_repository import UserRepository
 from fastapi import HTTPException, Response, status
 from fastapi.responses import JSONResponse
-from constants.user_constants import UserOnboardResult, UserConstants
+from utils.constants import Constants
 from typing import Any, Optional
 
 import logging
@@ -31,7 +31,7 @@ class GameService:
             raise
         
 
-    async def onboard_user(self, user_id: int, username: str) -> tuple[UserOnboardResult, Optional[dict]]:
+    async def onboard_user(self, user_id: int, username: str) -> tuple[Constants, Optional[dict]]:
         """Onboard the user to the game"""
         try:
             return await self.user_repo.onboard_user(user_id, username)

@@ -66,6 +66,13 @@ class CharacterService:
             logger.error(f"Failed to retrieve roster for user id {user_id}: {e}")
             raise
         
+    async def get_single_user_character(self, user_id: int, character_id:  int) -> tuple[Constants, Optional[dict]]:
+        """Get a single character claimed by one user"""
+        try:
+            return await self.character_repo.get_single_user_character(user_id, character_id)
+        except Exception as e:
+            logger.error(f"Failed to retrieve character {character_id} for user {user_id}")
+            raise
         
     """Setter Methods"""
             
@@ -86,6 +93,3 @@ class CharacterService:
             logger.error(f"Failed to remove character id {character_id} for user id {user_id} : {e}")
             raise
     
-    async def increase_exp(self, user_id: int, character_id: int, exp: int):
-        """Increase the EXP of a character and level up if needed."""
-        
