@@ -10,6 +10,7 @@ from repositories.user_repository import UserRepository
 from services.game_service import GameService
 from services.character_service import CharacterService
 from services.battle_service import BattleService
+from services.abilities_service import AbilitiesService
 from utils.response import APIResponse
 from utils.constants import Constants
 
@@ -22,6 +23,8 @@ logger = logging.getLogger(__name__)
 game_service = GameService()
 char_service = CharacterService()
 battle_service = BattleService()
+ability_service = AbilitiesService()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -150,6 +153,26 @@ async def test_add_xp_to_user(user_id:int, character_id: int, xp: int):
             return APIResponse.not_found(f"User {user_id} was not found.")
     except Exception as e:
         return APIResponse.error(f"Failed to add xp {xp} for character {character_id} for user {user_id}: {e}")
+    
+@app.post("/character/test/ability/{user_char_id}/{ability_id}")
+async def add_ability_to_user_char(user_char_id:int, ability_id:int):
+    """Test method to add ability to a user's character"""
+    try:
+        result_type, result_data = await ability_service.set_ability_to_user_character(user_char_id, ability_id)
+        if result_type == Constants.SUCCESS:
+            return APIResponse.success(result_data)
+    except Exception as e:
+        return APIResponse.error(f"Failed to add ability {ability_id} for character {user_char_id}: {e}")
+    
+@app.get("/character/test/ability/{user_char_id}")
+async def get_abilities_for_user_char(user_char_id:int):
+    try:
+        result_type, result_data = await ability_service.get_abilities_for_user_character(user_char_id)
+        if result_type == Constants.SUCCESS:
+            return APIResponse.success(result_data)
+    except Exception as e:
+        return APIResponse.error(f"Failed to get abilities for character {user_char_id}: {e}")
+        
 
 """User-Character Related endpoints"""
 

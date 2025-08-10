@@ -23,7 +23,7 @@ class CharacterService:
         try: 
             return await self.character_repo.get_all_characters()
         except Exception as e:
-            logger.error(f"Failed to retrieve all characters: {e}: {e}")
+            logger.error(f"Failed to retrieve all characters: {e}")
             raise
         
     async def get_char_by_name(self, char_name: str):

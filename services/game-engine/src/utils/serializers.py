@@ -2,6 +2,7 @@ from models.character import Character
 from models.ability import Ability
 from models.user import User
 from models.user_character import UserCharacter
+from models.user_character_ability import UserCharacterAbility
 
 class Serializer:
     """
@@ -68,3 +69,20 @@ class Serializer:
 
             "created_at": userChar.created_at
         }
+        
+    def serialize_user_character_ability(self, userCharAbility: UserCharacterAbility) -> dict:
+        """Helper method to serialize the user character ability to a dictionary"""
+        return {
+            "id": userCharAbility.id,
+            "user_character_id": userCharAbility.user_character_id,
+            "ability_id": userCharAbility.ability_id,
+            "unlocked_at": userCharAbility.unlocked_at,
+            
+            #Ability info
+            "name": userCharAbility.ability.name,
+            "description": userCharAbility.ability.description,
+            "attack": userCharAbility.ability.attack,
+            "defense": userCharAbility.ability.defense,
+            "element": userCharAbility.ability.element.capitalize(),
+        }
+        
