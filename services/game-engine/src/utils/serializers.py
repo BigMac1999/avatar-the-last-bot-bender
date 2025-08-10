@@ -3,6 +3,7 @@ from models.ability import Ability
 from models.user import User
 from models.user_character import UserCharacter
 from models.user_character_ability import UserCharacterAbility
+from models.ability_prerequisite import AbilityPrerequisite
 
 class Serializer:
     """
@@ -86,3 +87,33 @@ class Serializer:
             "element": userCharAbility.ability.element.capitalize(),
         }
         
+    def serialize_ability(self, ability: Ability) -> dict:
+        """Helper method to serialize the ability to a dictionary"""
+        return {
+            "id": ability.id,
+            "name": ability.name,
+            "description": ability.description,
+            "attack": ability.attack,
+            "defense": ability.defense,
+            "element": ability.element.capitalize(),
+        }
+        
+    def serialize_ability_prereq(self, abilityPrereq: AbilityPrerequisite) -> dict:
+        """Helper method to serialize the ability prerequisite to a dictionary"""
+        return {
+            "id": abilityPrereq.id,
+            "ability_id": abilityPrereq.ability_id,
+            "ability_name":abilityPrereq.ability.name,
+            "ability_description":abilityPrereq.ability.description,
+            "ability_attack": abilityPrereq.ability.attack,
+            "ability_defense": abilityPrereq.ability.defense,
+            "ability_element": abilityPrereq.ability.element,
+            "ability_unlock_cost": abilityPrereq.ability.unlock_cost,
+            "prerequisite_ability_id": abilityPrereq.prerequisite_ability_id,
+            "prerequisite_ability_name":abilityPrereq.prerequisite_ability.name,
+            "prerequisite_ability_description":abilityPrereq.prerequisite_ability.description,
+            "prerequisite_ability_attack": abilityPrereq.prerequisite_ability.attack,
+            "prerequisite_ability_defense": abilityPrereq.prerequisite_ability.defense,
+            "prerequisite_ability_element": abilityPrereq.prerequisite_ability.element,
+            "prerequisite_ability_unlock_cost": abilityPrereq.prerequisite_ability.unlock_cost,
+        }

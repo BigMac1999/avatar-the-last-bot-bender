@@ -14,3 +14,4 @@ class Constants(Enum):
     ALREADY_EXISTS = "already_exists"
     FAILED = "failed"
     USER_NOT_FOUND = "user_not_found"
+    NO_CONTENT = "no_content"

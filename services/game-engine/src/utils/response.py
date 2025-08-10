@@ -22,3 +22,7 @@ class APIResponse:
     @staticmethod
     def error(message: str = "Request failed") -> tuple[dict, int]:
         return {"error": message}, 500
+    
+    @staticmethod
+    def no_content(message: str = "No content") -> tuple[dict, int]:
+        return {"No Content": message}, 204

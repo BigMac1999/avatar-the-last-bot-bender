@@ -140,39 +140,28 @@ async def get_character_by_id(character_id: int):
         return APIResponse.success(result)
     return APIResponse.error("Character not found")
 
-@app.get("/characters/test/{user_id}/{character_id}/xp/{xp}")
-async def test_add_xp_to_user(user_id:int, character_id: int, xp: int):
-    """Test method to add XP to a user's character"""
+"""Abilities related endpoints"""
+@app.get("/abilities/{ability_id}")
+async def get_ability_by_id(ability_id: int):
+    """Fetch details for an ability by its ID"""
     try:
-        result_type, result_data = await battle_service.increase_exp(user_id, character_id, xp)
+        result_type, result_data = await ability_service.get_ability_by_id(ability_id)
         if result_type == Constants.SUCCESS:
             return APIResponse.success(result_data)
         elif result_type == Constants.NOT_FOUND:
-            return APIResponse.not_found(f"Unable to find character {character_id} for user {user_id}")
-        elif result_type == Constants.USER_NOT_FOUND:
-            return APIResponse.not_found(f"User {user_id} was not found.")
+            return APIResponse.not_found(f"Ability id {ability_id} was not found.")
     except Exception as e:
-        return APIResponse.error(f"Failed to add xp {xp} for character {character_id} for user {user_id}: {e}")
+        return APIResponse.error(f"Failed to find details for ability id {ability_id}: {e}")
     
-@app.post("/character/test/ability/{user_char_id}/{ability_id}")
-async def add_ability_to_user_char(user_char_id:int, ability_id:int):
-    """Test method to add ability to a user's character"""
+@app.get("/abilities/nest/prereq/{ability_id}")
+async def get_prereq_info(ability_id: int):
+    """Fetch info on the prereqs for an ability"""
     try:
-        result_type, result_data = await ability_service.set_ability_to_user_character(user_char_id, ability_id)
+        result_type, result_data = await ability_service.get_nested_prereqs_for_an_ability(ability_id)
         if result_type == Constants.SUCCESS:
             return APIResponse.success(result_data)
     except Exception as e:
-        return APIResponse.error(f"Failed to add ability {ability_id} for character {user_char_id}: {e}")
-    
-@app.get("/character/test/ability/{user_char_id}")
-async def get_abilities_for_user_char(user_char_id:int):
-    try:
-        result_type, result_data = await ability_service.get_abilities_for_user_character(user_char_id)
-        if result_type == Constants.SUCCESS:
-            return APIResponse.success(result_data)
-    except Exception as e:
-        return APIResponse.error(f"Failed to get abilities for character {user_char_id}: {e}")
-        
+        return APIResponse.error(f"Failed to find prereqs for ability id {ability_id}: {e}")
 
 """User-Character Related endpoints"""
 
@@ -233,6 +222,50 @@ async def get_user_roster(user_id: int):
         return APIResponse.error(f"Failed to find characters for user {user_id}: {e}")
     
 """Battle Related Endpoints"""
+
+
+
+"""Manual Test Endpoints"""
+
+@app.get("/characters/test/{user_id}/{character_id}/xp/{xp}")
+async def test_add_xp_to_user(user_id:int, character_id: int, xp: int):
+    """Test method to add XP to a user's character"""
+    try:
+        result_type, result_data = await battle_service.increase_exp(user_id, character_id, xp)
+        if result_type == Constants.SUCCESS:
+            return APIResponse.success(result_data)
+        elif result_type == Constants.NOT_FOUND:
+            return APIResponse.not_found(f"Unable to find character {character_id} for user {user_id}")
+        elif result_type == Constants.USER_NOT_FOUND:
+            return APIResponse.not_found(f"User {user_id} was not found.")
+    except Exception as e:
+        return APIResponse.error(f"Failed to add xp {xp} for character {character_id} for user {user_id}: {e}")
+    
+@app.post("/character/test/ability/{user_char_id}/{ability_id}")
+async def add_ability_to_user_char(user_char_id:int, ability_id:int):
+    """Test method to add ability to a user's character"""
+    try:
+        result_type, result_data = await ability_service.set_ability_to_user_character(user_char_id, ability_id)
+        if result_type == Constants.SUCCESS:
+            return APIResponse.success(result_data)
+        elif result_type == Constants.FAILED and result_data:
+            return APIResponse.error(f"Prerequisite abilities {result_data['missing_prerequisites']} not met for ability {ability_id} for character {user_char_id}")
+    except Exception as e:
+        return APIResponse.error(f"Failed to add ability {ability_id} for character {user_char_id}: {e}")
+    
+@app.get("/character/test/ability/{user_char_id}")
+async def get_abilities_for_user_char(user_char_id:int):
+    try:
+        result_type, result_data = await ability_service.get_abilities_for_user_character(user_char_id)
+        if result_type == Constants.SUCCESS:
+            return APIResponse.success(result_data)
+        elif result_type == Constants.NO_CONTENT:
+            return APIResponse.no_content("No content found for this method")
+    except Exception as e:
+        return APIResponse.error(f"Failed to get abilities for character {user_char_id}: {e}")
+        
+
+
 
 # @app.get("/battle/test/xp/{xp}/")
 # async def battle(
