@@ -5,12 +5,11 @@ from fastapi.responses import JSONResponse
 from fastapi import HTTPException, Response, status
 from database.connection import database_manager
 from database.migrations import MigrationRunner
-from repositories.character_repository import CharacterRepository
-from repositories.user_repository import UserRepository
 from services.game_service import GameService
 from services.character_service import CharacterService
 from services.battle_service import BattleService
 from services.abilities_service import AbilitiesService
+from services.enemy_service import EnemyService
 from utils.response import APIResponse
 from utils.constants import Constants
 

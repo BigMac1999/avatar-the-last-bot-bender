@@ -25,6 +25,7 @@ class Ability(Base):
     
     # Relationships
     character_abilities = relationship("CharacterAbility", back_populates="ability")
+    enemy_abilities = relationship("EnemyAbility", back_populates="ability")
     user_character_abilities = relationship("UserCharacterAbility", back_populates="ability")
     prerequisites = relationship("AbilityPrerequisite", foreign_keys="AbilityPrerequisite.ability_id", back_populates="ability")
     required_for = relationship("AbilityPrerequisite", foreign_keys="AbilityPrerequisite.prerequisite_ability_id", back_populates="prerequisite_ability")

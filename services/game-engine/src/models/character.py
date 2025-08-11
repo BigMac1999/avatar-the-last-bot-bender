@@ -26,7 +26,7 @@ class Character(Base):
     )
     
     rarity = Column(Integer, nullable=False, index=True)
-    hp = Column(Integer, nullable=False)  
+    hp = Column(Integer, nullable=False)
     attack = Column(Integer, nullable=False)
     description = Column(Text)
     
