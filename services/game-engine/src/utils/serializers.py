@@ -4,6 +4,7 @@ from models.user import User
 from models.user_character import UserCharacter
 from models.user_character_ability import UserCharacterAbility
 from models.ability_prerequisite import AbilityPrerequisite
+from models.character_ability import CharacterAbility
 
 class Serializer:
     """
@@ -116,4 +117,12 @@ class Serializer:
             "prerequisite_ability_defense": abilityPrereq.prerequisite_ability.defense,
             "prerequisite_ability_element": abilityPrereq.prerequisite_ability.element,
             "prerequisite_ability_unlock_cost": abilityPrereq.prerequisite_ability.unlock_cost,
+        }
+        
+    def serialize_character_ability(self, characterAbility: CharacterAbility) -> dict:
+        """Helper method to serialize the character ability to a dictionary"""
+        return {
+            "id": characterAbility.id,
+            "character_id": characterAbility.character_id,
+            "ability_id": characterAbility.ability_id
         }

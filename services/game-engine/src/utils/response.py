@@ -26,3 +26,7 @@ class APIResponse:
     @staticmethod
     def no_content(message: str = "No content") -> tuple[dict, int]:
         return {"No Content": message}, 204
+    
+    @staticmethod
+    def already_exists(message: str = "Already Exists") -> tuple[dict, int]:
+        return {"Already exists": message}, 204

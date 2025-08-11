@@ -8,6 +8,7 @@ from models.user_character import UserCharacter
 from models.user_character_ability import UserCharacterAbility
 from models.ability_prerequisite import AbilityPrerequisite
 from models.ability import Ability
+from models.character_ability import CharacterAbility
 from utils.constants import Constants
 from utils.serializers import Serializer
 import logging
@@ -110,6 +111,19 @@ class AbilitiesRepository:
             return Constants.SUCCESS, self.serializer.serialize_ability(ability)
         return Constants.ERROR, None
 
+    async def check_if_character_can_learn_ability(self, ability_id:int, char_id: int):
+        """Check if the character is able to learn the ability in question"""
+        with database_manager.get_db_session() as session:
+            char_ability = session.query(CharacterAbility)\
+                .filter(CharacterAbility.character_id==char_id,
+                        CharacterAbility.ability_id==ability_id)\
+                .first()
+                
+            if not char_ability:
+                return Constants.BAD_REQUEST, None
+            
+            return Constants.SUCCESS, self.serializer.serialize_character_ability(char_ability)
+        return Constants.ERROR, None
     
     """Setter Methods"""
 

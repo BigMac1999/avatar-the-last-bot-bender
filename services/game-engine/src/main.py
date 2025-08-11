@@ -250,6 +250,8 @@ async def add_ability_to_user_char(user_char_id:int, ability_id:int):
             return APIResponse.success(result_data)
         elif result_type == Constants.FAILED and result_data:
             return APIResponse.error(f"Prerequisite abilities {result_data['missing_prerequisites']} not met for ability {ability_id} for character {user_char_id}")
+        elif result_type == Constants.ALREADY_EXISTS:
+            return APIResponse.already_exists(f"User character {user_char_id} already has ability {ability_id}")
     except Exception as e:
         return APIResponse.error(f"Failed to add ability {ability_id} for character {user_char_id}: {e}")
     

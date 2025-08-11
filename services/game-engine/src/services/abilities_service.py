@@ -55,7 +55,35 @@ class AbilitiesService:
         """Check if user has all prerequisites for an ability"""
         try:
             # Get the nested prerequisite tree
+            char_status, char_data = await self.abilities_repo.check_if_character_can_learn_ability(ability_id, user_char_id)
             status, tree = await self.abilities_repo.get_nested_ability_prereqs(ability_id)
+            # if status != Constants.SUCCESS or char_status != Constants.SUCCESS:
+            #     return status, tree or {}
+            
+            if tree is None and char_data is None:
+                return Constants.ERROR, {
+                    "message": "Unable to retrieve prerequisite data",
+                    "ability_id": ability_id
+                }
+            elif char_data is None:
+                return char_status, {
+                    "message": "Character data not found",
+                    "ability_id": ability_id
+                }
+            elif tree is None and status != Constants.NO_CONTENT:
+                return status, {
+                    "message": "Prerequisite tree not found", 
+                    "ability_id": ability_id
+                }
+            
+            if tree is None:
+                return Constants.ERROR, None
+            
+            if char_status != Constants.SUCCESS:
+                return char_status, char_data
+            
+            if status != Constants.SUCCESS and status != Constants.NO_CONTENT:
+                return status, tree
             
             if status == Constants.NO_CONTENT:
                 return Constants.NO_CONTENT, {
@@ -65,29 +93,14 @@ class AbilitiesService:
                     "message": "No prerequisites required"
                 }
             
-            if status != Constants.SUCCESS:
-                return status, tree or {}
-            
-            if tree is None:
-                return status, None
-            
             # Extract all prerequisite IDs from tree
             all_prereq_ids = self._flatten_prerequisite_tree(tree)
-            
-            # DEBUG: Log what prerequisites are required
-            logger.info(f"Prerequisites required for ability {ability_id}: {all_prereq_ids}")
             
             # Check which abilities user has
             user_abilities = await self._get_user_abilities_batch(user_char_id, all_prereq_ids)
             
-            # DEBUG: Log what abilities user has
-            logger.info(f"User {user_char_id} abilities check: {user_abilities}")
-            
             # Find missing prerequisites
             missing = [ability_id for ability_id, has_ability in user_abilities.items() if not has_ability]
-            
-            # DEBUG: Log missing prerequisites
-            logger.info(f"Missing prerequisites for ability {ability_id}: {missing}")
             
             if len(missing) > 0:
                 return Constants.FAILED, {
@@ -106,7 +119,10 @@ class AbilitiesService:
             
         except Exception as e:
             logger.error(f"Failed to check prerequisites for ability {ability_id} and user character {user_char_id}: {e}")
-            return Constants.ERROR, None
+            return Constants.ERROR, {
+                "message": f"Failed to check prerequisites: {str(e)}",
+                "ability_id": ability_id
+            }
     
     # async def check_abilities_max(self):
     #     """Check if a user has the max number of abilities selected."""
@@ -148,32 +164,52 @@ class AbilitiesService:
         """Set an ability for a user claimed character"""
         try:
             # # Check if user already has this ability
-            # user_abilities_status, user_abilities = await self.abilities_repo.get_abilities_for_user_character(user_char_id)
-            # for ability in user_abilities:
-                
+            user_abilities_status, user_abilities = await self.abilities_repo.get_abilities_for_user_character(user_char_id)
+            
+            if user_abilities:
+                for ability in user_abilities:
+                    if ability['ability_id'] == ability_id:
+                        return Constants.ALREADY_EXISTS, {
+                            "message": "Ability already claimed",
+                            "ability_id": ability_id
+                        } 
             
             # Check if user has all prerequisites
             prereq_status, prereq_result = await self.check_user_has_prerequisites(user_char_id, ability_id)
             
-            # DEBUG: Log the prerequisite check result
-            logger.info(f"Prerequisite check for ability {ability_id}, user_char {user_char_id}: status={prereq_status}, result={prereq_result}")
             
-            # if prereq_result is None:
-            #     return Constants.ERROR, None
-            
-            if prereq_status == Constants.FAILED and prereq_result:
-                return Constants.FAILED, {
-                    "message": "Prerequisites not met", 
-                    "missing_prerequisites": prereq_result["missing_prerequisites"],
-                    "ability_id": ability_id
-                }
+            if prereq_status == Constants.FAILED:
+                if prereq_result:
+                    return Constants.FAILED, {
+                        "message": "Prerequisites not met", 
+                        "missing_prerequisites": prereq_result["missing_prerequisites"],
+                        "ability_id": ability_id
+                    }
+                else:
+                    return Constants.FAILED, {
+                        "message": "Prerequisites check failed", 
+                        "missing_prerequisites": [],
+                        "ability_id": ability_id
+                    }
             elif prereq_status == Constants.SUCCESS or prereq_status == Constants.NO_CONTENT:
                 # Prerequisites met or no prerequisites required - proceed to add ability
                 return await self.abilities_repo.set_ability_to_user_character(user_char_id, ability_id)
+            elif prereq_status == Constants.BAD_REQUEST:
+                return Constants.FAILED, {
+                    "message": "Character cannot learn this ability",
+                    "missing_prerequisites": ["Character cannot learn this ability"],
+                    "ability_id": ability_id
+                }
             else:
                 # Handle other status codes (ERROR, etc.)
-                return prereq_status, prereq_result
+                return prereq_status, prereq_result or {
+                    "message": "Unknown error in prerequisite check",
+                    "ability_id": ability_id
+                }
             
         except Exception as e:
             logger.error(f"Failed to set ability {ability_id} for character id {user_char_id}: {e}")
-            return Constants.ERROR, None
+            return Constants.ERROR, {
+                "message": f"Failed to set ability: {str(e)}",
+                "ability_id": ability_id
+            }
