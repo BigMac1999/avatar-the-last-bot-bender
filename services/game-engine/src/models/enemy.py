@@ -28,4 +28,4 @@ class Enemy(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     #Relationships to other models
-    enemy_abilities = relationship("EnemyAbilities", back_populates="enemy")    
+    enemy_abilities = relationship("EnemyAbility", back_populates="enemy")    

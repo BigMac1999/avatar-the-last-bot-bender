@@ -23,7 +23,7 @@ game_service = GameService()
 char_service = CharacterService()
 battle_service = BattleService()
 ability_service = AbilitiesService()
-
+enemy_service = EnemyService()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -52,6 +52,8 @@ app = FastAPI(
     lifespan=lifespan
     )
 
+
+
 """Health check endpoints and migrations"""
 @app.get("/ping")
 async def ping():
@@ -77,7 +79,106 @@ async def migration_status():
     status = await migration_runner.get_migration_status()
     return APIResponse.success(status)
 
-"""User-related endpoints"""
+
+
+"""Character-related endpoints"""
+
+@app.get("/characters")
+async def get_all_characters():
+    """Fetch all characters from the database"""
+    result = await char_service.get_all_characters()
+    return APIResponse.success(result)
+
+@app.get("/characters/name/{character_name}")
+async def get_character_by_name(character_name: str):
+    """Fetch a character by name"""
+    result = await char_service.get_char_by_name(character_name)
+    if result:
+        return APIResponse.success(result)
+    return APIResponse.error("Character not found")
+
+@app.get("/characters/id/{character_id}")
+async def get_character_by_id(character_id: int):
+    """Fetch a character by id"""
+    result = await char_service.get_char_by_id(character_id)
+    if result: 
+        return APIResponse.success(result)
+    return APIResponse.error("Character not found")
+
+
+
+
+"""Enemy related endpoints"""
+
+@app.get("/enemies")
+async def get_all_enemies():
+    """Fetch all enemies from the database"""
+    try:
+        result_type, result_data = await enemy_service.get_all_enemies()
+        if result_type == Constants.SUCCESS:
+            return APIResponse.success(result_data)
+        elif result_type == Constants.ERROR:
+            return APIResponse.error("Unable to retrieve all enemies")
+    except Exception as e:
+        return APIResponse.error(f"Failed to retrieve all enemies: {e}")
+
+@app.get("/enemies/roster")
+async def get_enemies_roster():
+    """Fetch all enemies and their abilities from database"""
+    try:
+        result_type, result_data = await enemy_service.get_enemies_roster()
+        if result_type == Constants.SUCCESS:
+            return APIResponse.success(result_data)
+        elif result_type == Constants.ERROR:
+            return APIResponse.error("Unable to retrieve enemies roster")
+    except Exception as e:
+        return APIResponse.error(f"Failed to retrieve enemies roster: {e}")
+    
+@app.get("/enemies/details")
+async def get_enemy_details(enemy_id: int):
+    """Get details on a specific enemy"""
+    try:
+        result_type, result_data = await enemy_service.get_single_enemy(enemy_id)
+        if result_type == Constants.SUCCESS:
+            return APIResponse.success(result_data)
+        elif result_type == Constants.NOT_FOUND:
+            return APIResponse.not_found("Enemy you're searching for couldn't be found")
+        elif result_type == Constants.ERROR:
+            return APIResponse.error("Unable to retrieve enemies roster")
+    except Exception as e:
+        return APIResponse.error(f"Failed to retrieve enemies roster: {e}")
+        
+
+
+"""Abilities related endpoints"""
+
+@app.get("/abilities/{ability_id}")
+async def get_ability_by_id(ability_id: int):
+    """Fetch details for an ability by its ID"""
+    try:
+        result_type, result_data = await ability_service.get_ability_by_id(ability_id)
+        if result_type == Constants.SUCCESS:
+            return APIResponse.success(result_data)
+        elif result_type == Constants.NOT_FOUND:
+            return APIResponse.not_found(f"Ability id {ability_id} was not found.")
+    except Exception as e:
+        return APIResponse.error(f"Failed to find details for ability id {ability_id}: {e}")
+    
+@app.get("/abilities/nest/prereq/{ability_id}")
+async def get_prereq_info(ability_id: int):
+    """Fetch info on the prereqs for an ability"""
+    try:
+        result_type, result_data = await ability_service.get_nested_prereqs_for_an_ability(ability_id)
+        if result_type == Constants.SUCCESS:
+            return APIResponse.success(result_data)
+    except Exception as e:
+        return APIResponse.error(f"Failed to find prereqs for ability id {ability_id}: {e}")
+
+
+
+
+"""User-Character Related endpoints"""
+
 @app.get("/users")
 async def get_all_users():
     """Fetch all users from the database"""
@@ -114,55 +215,6 @@ async def add_user(
             return APIResponse.conflict("User already exists")
     except Exception:
         return APIResponse.error(f"Failed to add user {user_id} {username}")
-
-"""Character-related endpoints"""
-
-@app.get("/characters")
-async def get_all_characters():
-    """Fetch all characters from the database"""
-    result = await char_service.get_all_characters()
-    return APIResponse.success(result)
-
-@app.get("/characters/name/{character_name}")
-async def get_character_by_name(character_name: str):
-    """Fetch a character by name"""
-    result = await char_service.get_char_by_name(character_name)
-    if result:
-        return APIResponse.success(result)
-    return APIResponse.error("Character not found")
-
-@app.get("/characters/id/{character_id}")
-async def get_character_by_id(character_id: int):
-    """Fetch a character by id"""
-    result = await char_service.get_char_by_id(character_id)
-    if result: 
-        return APIResponse.success(result)
-    return APIResponse.error("Character not found")
-
-"""Abilities related endpoints"""
-@app.get("/abilities/{ability_id}")
-async def get_ability_by_id(ability_id: int):
-    """Fetch details for an ability by its ID"""
-    try:
-        result_type, result_data = await ability_service.get_ability_by_id(ability_id)
-        if result_type == Constants.SUCCESS:
-            return APIResponse.success(result_data)
-        elif result_type == Constants.NOT_FOUND:
-            return APIResponse.not_found(f"Ability id {ability_id} was not found.")
-    except Exception as e:
-        return APIResponse.error(f"Failed to find details for ability id {ability_id}: {e}")
-    
-@app.get("/abilities/nest/prereq/{ability_id}")
-async def get_prereq_info(ability_id: int):
-    """Fetch info on the prereqs for an ability"""
-    try:
-        result_type, result_data = await ability_service.get_nested_prereqs_for_an_ability(ability_id)
-        if result_type == Constants.SUCCESS:
-            return APIResponse.success(result_data)
-    except Exception as e:
-        return APIResponse.error(f"Failed to find prereqs for ability id {ability_id}: {e}")
-
-"""User-Character Related endpoints"""
 
 @app.get("/users/{user_id}/characters")
 async def get_user_characters(user_id: int):
@@ -220,7 +272,11 @@ async def get_user_roster(user_id: int):
     except Exception as e:
         return APIResponse.error(f"Failed to find characters for user {user_id}: {e}")
     
+    
+    
 """Battle Related Endpoints"""
+
+
 
 
 

@@ -5,6 +5,8 @@ from models.user_character import UserCharacter
 from models.user_character_ability import UserCharacterAbility
 from models.ability_prerequisite import AbilityPrerequisite
 from models.character_ability import CharacterAbility
+from models.enemy import Enemy
+from models.enemy_abilities import EnemyAbility
 
 class Serializer:
     """
@@ -125,4 +127,54 @@ class Serializer:
             "id": characterAbility.id,
             "character_id": characterAbility.character_id,
             "ability_id": characterAbility.ability_id
+        }
+        
+    def serialize_enemy(self, enemy: Enemy) -> dict:
+        """Helper method to serialize an Enemy object to dictionary"""
+        return {
+            "id": enemy.id,
+            "name": enemy.name,
+            "description": enemy.description,
+            "enemy_hp": enemy.enemy_hp,
+            "enemy_attack": enemy.enemy_attack,
+            "level": enemy.level,
+            "behavior_type": enemy.behavior_type,
+            "element": enemy.element,
+            "xp_drop": enemy.xp_drop,
+            "created_at": enemy.created_at.isoformat() if enemy.created_at is not None else None
+        }
+        
+    def serialize_enemy_ability(self, enemyAbility: EnemyAbility) -> dict:
+        """Helper method to serialize an EnemyAbility object to dictionary"""
+        return {
+            "id": enemyAbility.id,
+            "enemy_id": enemyAbility.enemy_id,
+            "ability_id": enemyAbility.ability_id,
+            "behavior_type": enemyAbility.behavior_type
+        }
+        
+    def serialize_enemy_with_abilities(self, enemy: Enemy) -> dict:
+        """Helper method to serialize an Enemy with its abilities to dictionary"""
+        return {
+            "id": enemy.id,
+            "name": enemy.name,
+            "description": enemy.description,
+            "enemy_hp": enemy.enemy_hp,
+            "enemy_attack": enemy.enemy_attack,
+            "level": enemy.level,
+            "behavior_type": enemy.behavior_type,
+            "element": enemy.element,
+            "xp_drop": enemy.xp_drop,
+            "created_at": enemy.created_at.isoformat() if enemy.created_at is not None else None,
+            "abilities": [
+                {
+                    "ability_id": ea.ability_id,
+                    "behavior_type": ea.behavior_type,
+                    "name": ea.ability.name,
+                    "description": ea.ability.description,
+                    "attack": ea.ability.attack,
+                    "defense": ea.ability.defense,
+                    "element": ea.ability.element
+                } for ea in enemy.enemy_abilities
+            ]
         }

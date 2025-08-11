@@ -13,7 +13,7 @@ class EnemyAbility(Base):
     __tablename__ = "enemy_abilities"
     
     id = Column(Integer, primary_key=True, index=True)
-    enemy_id = Column(Integer, ForeignKey("enemy.id", ondelete="CASCADE"), nullable=False, index=True)
+    enemy_id = Column(Integer, ForeignKey("enemies.id", ondelete="CASCADE"), nullable=False, index=True)
     ability_id = Column(Integer, ForeignKey("abilities.id", ondelete="CASCADE"), nullable=False, index=True)
     behavior_type = Column(String(100), nullable=False)
     
