@@ -1,5 +1,8 @@
 from fastapi import FastAPI, Query
 from contextlib import asynccontextmanager
+from pydantic import BaseModel
+from typing import Optional
+from datetime import datetime
 
 from fastapi.responses import JSONResponse
 from fastapi import HTTPException, Response, status
@@ -276,7 +279,35 @@ async def get_user_roster(user_id: int):
     
 """Battle Related Endpoints"""
 
+@app.post("/battle/start")
+async def start_a_battle(opponent_type: str, user_id: int, opponent_id: int):
+    """Request a battle. If with a bot, this is autoapproved, if with another user, a battle request is created instead."""
+    try:
+        if opponent_type == "bot":
+            result_type, result_data = await battle_service.create_battle_bot(user_id, opponent_id)
+        elif opponent_type == "user":
+            result_type, result_data = await battle_service.create_battle_request_user(user_id, opponent_id)
+        else:
+            return APIResponse.error("Opponent_type invalid")
+        
+        if result_type == Constants.SUCCESS:
+            return APIResponse.success(result_data)
+        elif result_type == Constants.NOT_FOUND:
+            return APIResponse.not_found(f"Opponent {opponent_id} not found.")
+        elif result_type == Constants.ALREADY_EXISTS:
+            return APIResponse.not_found(f"There is already a battle request between user {user_id} and opponent {opponent_id}.")
+        elif result_type == Constants.ERROR:
+            return APIResponse.error()
+    except Exception as e:
+        return APIResponse.error(f"Failed to add start {opponent_type} battle between {user_id} and {opponent_type}: {e}")
 
+@app.post("/battle/turn")
+async def battle_turn(battle_id: int):
+    pass
+
+@app.get("battle/history")
+async def battle_history(battle_id: int):
+    pass
 
 
 
@@ -321,7 +352,18 @@ async def get_abilities_for_user_char(user_char_id:int):
     except Exception as e:
         return APIResponse.error(f"Failed to get abilities for character {user_char_id}: {e}")
         
-
+@app.post("/battle/test/finish")
+async def complete_a_battle(battle_id: int, status: str):
+    try:
+        result_type, result_data = await battle_service.update_battle(battle_id, status=status)
+        if result_type == Constants.SUCCESS:
+            return APIResponse.success(result_data)
+        elif result_type == Constants.NOT_FOUND:
+            return APIResponse.no_content("The battle {battle_id} was not found")
+        elif result_type == Constants.BAD_REQUEST:
+            return APIResponse.no_content("Attribute provided was incorrect")
+    except Exception as e:
+        return APIResponse.error(f"Failed to edit battle {battle_id}: {e}")
 
 
 # @app.get("/battle/test/xp/{xp}/")

@@ -7,6 +7,7 @@ from models.ability_prerequisite import AbilityPrerequisite
 from models.character_ability import CharacterAbility
 from models.enemy import Enemy
 from models.enemy_abilities import EnemyAbility
+from models.battle import Battle
 
 class Serializer:
     """
@@ -177,4 +178,33 @@ class Serializer:
                     "element": ea.ability.element
                 } for ea in enemy.enemy_abilities
             ]
+        }
+    
+    def serialize_battle(self, battle: Battle) -> dict:
+        """Helper method to serialize a Battle object to dictionary"""
+        return {
+            "id": battle.id,
+            "challenger_id": battle.challenger_id,
+            "opponent_id": battle.opponent_id,
+            "winner_id": battle.winner_id,
+            "battle_log": battle.battle_log,
+            "status": battle.status,
+            "created_at": battle.created_at.isoformat() if battle.created_at is not None else None,
+            "completed_at": battle.completed_at.isoformat() if battle.completed_at is not None else None
+        }
+        
+    def serialize_battle_with_participants(self, battle: Battle) -> dict:
+        """Helper method to serialize a Battle with participant details to dictionary"""
+        return {
+            "id": battle.id,
+            "challenger_id": battle.challenger_id,
+            "challenger_username": battle.challenger.username if battle.challenger else None,
+            "opponent_id": battle.opponent_id,
+            "opponent_username": battle.opponent.username if battle.opponent else None,
+            "winner_id": battle.winner_id,
+            "winner_username": battle.winner.username if battle.winner else None,
+            "battle_log": battle.battle_log,
+            "status": battle.status,
+            "created_at": battle.created_at.isoformat() if battle.created_at is not None else None,
+            "completed_at": battle.completed_at.isoformat() if battle.completed_at is not None else None
         }

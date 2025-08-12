@@ -72,5 +72,25 @@ class BattleService:
             
         return statusCode, data
         
+    async def create_battle_request_user(self, user_id: int, opponent_id: int) -> tuple[Constants, Optional[dict]]:
+        """Create a new battle"""
+        try:
+            return await self.battle_repo.create_battle_request_user(user_id, opponent_id)
+        except Exception as e:
+            logger.error(f"Failed to create user battle request between user {user_id} and user {opponent_id}: {e}")
+            raise
         
-        
+    async def create_battle_bot(self, user_id: int, opponent_id: int):
+        try:
+            return await self.battle_repo.create_battle_bot(user_id, opponent_id)
+        except Exception as e:
+            logger.error(f"Failed to create battle request between user {user_id} and enemy {opponent_id}: {e}")
+            raise
+    
+    async def update_battle(self, battle_id: int, **updates):
+        """Update an existing battle ()"""
+        try:
+            return await self.battle_repo.update_battle(battle_id, **updates)
+        except Exception as e:
+            logger.error(f"Failed to update battle id {battle_id}: {e}")
+            raise

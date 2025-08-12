@@ -9,13 +9,24 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
   
   game-engine:
     build: ./services/game-engine
     depends_on:
       - postgres
+      - redis
     environment:
       DATABASE_URL: postgresql://atla_user:password@postgres:5432/atla_db
+      REDIS_URL: redis://redis:6379
     volumes:
       - ./services/game-engine:/app
     ports:
@@ -41,3 +52,4 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
