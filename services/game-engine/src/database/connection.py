@@ -1,10 +1,12 @@
 import os
 import logging
-from contextlib import contextmanager
+from contextlib import contextmanager, asynccontextmanager
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
-from typing import Generator
+from typing import Generator, AsyncIterator, AsyncContextManager
+import redis.asyncio as redis
+from redis.asyncio import Redis
 
 logger = logging.getLogger(__name__)
 
@@ -74,5 +76,64 @@ class DatabaseManager:
         Base.metadata.create_all(bind=self.engine)
         logger.info("Database tables created/updated")
 
-# Global database manager instance
+class RedisManager:
+    """
+    Simple Redis Manager for application-wide Redis operations
+    """
+    
+    _instance = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(RedisManager, cls).__new__(cls)
+        return cls._instance
+    
+    def __init__(self):
+        if not hasattr(self, 'redis_url'):
+            self._initialize_connection()
+    
+    def _initialize_connection(self):
+        """Initialize Redis connection configuration"""
+        try:
+            self.redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
+            logger.info("Redis connection configuration initialized successfully")
+        except Exception as e:
+            logger.error(f"Unexpected error setting up Redis: {e}")
+            self.redis_url = None
+    
+    async def create_connection(self) -> Redis:
+        """Create a new Redis connection"""
+        if not hasattr(self, 'redis_url') or self.redis_url is None:
+            raise ConnectionError("Redis connection not available")
+        
+        return redis.Redis.from_url(
+            self.redis_url,
+            decode_responses=True
+        )
+    
+    async def is_connected(self) -> bool:
+        """Check if Redis is available and responding"""
+        try:
+            conn = await self.create_connection()
+            await conn.ping()
+            await conn.aclose()
+            return True
+        except:
+            return False
+
+    async def health_check(self):
+        """Check if Redis connection is healthy"""
+        try:
+            conn = await self.create_connection()
+            await conn.ping()
+            await conn.aclose()
+            logger.info("Redis connection is healthy")
+            return {"status": "connected", "test_operation": "ping", "message": "Redis connection is healthy"}
+        except Exception as e:
+            logger.error(f"Redis health check failed: {e}")
+            return {"status": "error", "message": str(e)}
+
+
+# Global manager instances
 database_manager = DatabaseManager()
+redis_manager = RedisManager()
