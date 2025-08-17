@@ -6,7 +6,7 @@ from datetime import datetime
 
 from fastapi.responses import JSONResponse
 from fastapi import HTTPException, Response, status
-from database.connection import database_manager
+from database.connection import database_manager, redis_manager
 from database.migrations import MigrationRunner
 from services.game_service import GameService
 from services.character_service import CharacterService
@@ -68,10 +68,14 @@ async def ping():
 async def health_check():
     """Health check with database connection status"""
     health_status = await database_manager.health_check()
+    redis_health_status = await redis_manager.health_check()
     health_dict =  {
-        "status": health_status.get("status", "unknown"),
-        "message": health_status.get("message", "No message provided"),
-        "test_query": health_status.get("test_query", "not executed")
+        "postgres_status": health_status.get("status", "unknown"),
+        "postgres_message": health_status.get("message", "No message provided"),
+        "postgres_test_query": health_status.get("test_query", "not executed"),
+        "redis_status": redis_health_status.get("status", "unknown"),
+        "redis_test_operation": redis_health_status.get("test_operation", "unknown"),
+        "redis_message": redis_health_status.get("message", "unknown")
     }
     return APIResponse.success(health_dict)
     
@@ -301,13 +305,36 @@ async def start_a_battle(opponent_type: str, user_id: int, opponent_id: int):
     except Exception as e:
         return APIResponse.error(f"Failed to add start {opponent_type} battle between {user_id} and {opponent_type}: {e}")
 
-@app.post("/battle/turn")
-async def battle_turn(battle_id: int):
-    pass
+@app.post("/battle/request")
+#TODO: This needs alot of work as far as error validation goes
+async def battle_turn(battle_id: int, user_id: int, response: str):
+    "Respond to a user request, specifically only for user v user battles"
+    try:
+        response.lower()
+        if response == "yes" or response == "no":
+            result_type, result_data = await battle_service.update_battle_request_user(user_id, battle_id, response)
+        else:
+            return APIResponse.error("Response invalid")
+        
+        if result_type == Constants.SUCCESS:
+            return APIResponse.success(result_data)
+        elif result_type == Constants.NOT_FOUND:
+            return APIResponse.not_found(f"Battle not found")
+        elif result_type == Constants.ALREADY_EXISTS:
+            return APIResponse.already_exists(f"This battle has already started. ")
+        elif result_type == Constants.CONFLICT:
+            return APIResponse.conflict(f"This battle request does exist but you're not listed as the opponent")
+        return APIResponse.error()
+    except Exception as e:
+        return APIResponse.error(f"Failed to add respond to request battle id {battle_id}: {e}")
 
-@app.get("battle/history")
-async def battle_history(battle_id: int):
-    pass
+# @app.post("/battle/turn")
+# async def battle_turn(battle_id: int):
+#     pass
+
+# @app.get("battle/history")
+# async def battle_history(battle_id: int):
+#     pass
 
 
 
@@ -364,6 +391,9 @@ async def complete_a_battle(battle_id: int, status: str):
             return APIResponse.no_content("Attribute provided was incorrect")
     except Exception as e:
         return APIResponse.error(f"Failed to edit battle {battle_id}: {e}")
+    
+# @app.post("/battle/test/start/redis")
+# async def test_redis_operation(battle_id: int, )
 
 
 # @app.get("/battle/test/xp/{xp}/")

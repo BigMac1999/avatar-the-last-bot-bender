@@ -21,6 +21,7 @@ class Battle(Base):
     # Foreign keys to users table - notice how we handle multiple references
     challenger_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     opponent_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)  
+    battle_type = Column(String(20), default="user" , nullable=False, index=True)
     winner_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     
     battle_log = Column(Text)  # JSON string of battle events
@@ -31,6 +32,7 @@ class Battle(Base):
     
     __table_args__ = (
         CheckConstraint("status IN ('pending', 'in_progress', 'completed', 'cancelled')", name="check_battle_status"),
+        CheckConstraint("battle_type IN ('bot', 'user')", name="check_battle_type")
     )
     
     # Relationships - Notice foreign_keys parameter to handle multiple FKs to same table

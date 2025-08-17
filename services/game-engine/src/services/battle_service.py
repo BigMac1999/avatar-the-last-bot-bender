@@ -71,20 +71,63 @@ class BattleService:
         )
             
         return statusCode, data
+    
+    
+    """Battle Specific Methods"""
         
     async def create_battle_request_user(self, user_id: int, opponent_id: int) -> tuple[Constants, Optional[dict]]:
-        """Create a new battle"""
+        """Create a new battle request for user v user"""
         try:
-            return await self.battle_repo.create_battle_request_user(user_id, opponent_id)
+            return await self.battle_repo.create_battle_request_user(user_id, opponent_id, battle_type="user")
         except Exception as e:
             logger.error(f"Failed to create user battle request between user {user_id} and user {opponent_id}: {e}")
             raise
         
     async def create_battle_bot(self, user_id: int, opponent_id: int):
+        """Create battle for user v bot"""
         try:
-            return await self.battle_repo.create_battle_bot(user_id, opponent_id)
+            # Create Postgres entry for the battle
+            result_type, result_data =  await self.battle_repo.create_battle_bot(user_id, opponent_id, battle_type="bot")
+        
+            if result_type == Constants.SUCCESS and result_data is not None:
+                await self.create_redis_battle()
+                return Constants.SUCCESS, result_data
+            
+            return Constants.ERROR, None
         except Exception as e:
             logger.error(f"Failed to create battle request between user {user_id} and enemy {opponent_id}: {e}")
+            raise
+        
+    async def update_battle_request_user(self, user_id: int, battle_id: int, response: str) -> tuple[Constants, Optional[dict]]:
+        """Update a battle request for user v user"""
+        try:
+            battle_status, battle = await self.battle_repo.get_battle(battle_id)
+            
+            if battle_status != Constants.SUCCESS:
+                return Constants.NOT_FOUND, None
+            
+            if battle == None:
+                return Constants.INTERNAL_SERVER_ERROR, None
+            
+            if (battle['id'] == battle_id) and (battle['opponent_id'] == user_id):
+                if battle['status'] == "in_progress" or battle['status'] == "completed":
+                    return Constants.ALREADY_EXISTS, None
+                
+                if response == "yes":
+                    result_type, result_data =  await self.battle_repo.update_battle(battle_id, status="in_progress")
+                
+                    if result_type == Constants.SUCCESS and result_data is not None:
+                        await self.create_redis_battle() 
+                        return Constants.SUCCESS, result_data
+                elif response == "no":
+                    return await self.battle_repo.update_battle(battle_id, status="cancelled")
+            elif (battle['id' == battle_id]) and (battle['opponent_id'] != user_id):
+                return Constants.CONFLICT, None
+            
+            return Constants.BAD_REQUEST, None
+        
+        except Exception as e:
+            logger.error(f"Failed to update battle request for user {user_id} for battle {battle_id}: {e}")
             raise
     
     async def update_battle(self, battle_id: int, **updates):
@@ -94,3 +137,52 @@ class BattleService:
         except Exception as e:
             logger.error(f"Failed to update battle id {battle_id}: {e}")
             raise
+        
+    async def create_redis_battle(self):
+        # Need to format dicts that will be implemented into the redis cache
+        
+        # Get user 1 character list with abilities
+        
+        # Get user 2 character list with abilities
+        
+        
+        
+        pass
+    
+    async def return_redis_battle_state_dict(self):
+#  TODO:  9. Implement team snapshot creation at battle start to freeze team composition and abilities
+
+#   10. Create Redis methods to store immutable team snapshots (character stats, abilities, levels)
+
+#   11. Separate current battle state (HP/MP/effects) from immutable snapshot data
+
+#   12. Update battle initialization to capture both teams' complete state at battle creation
+
+        return {
+            "battle_id": "",
+            "status": "",
+            "battle_type": "",
+            "created_at": "",
+            "last_modified": "",
+            "participants": {
+                "user1": "",
+                "user2": ""
+            },
+            "turn_data": {
+                "current_turn": "",
+                "current_player": "",
+                "turn_order": [],
+                "turn_started_at": "",
+            },
+            "battle_rules": {
+                "max_team_size": "",
+                "max_turns": "",
+                "swap_cooldown": "",
+                "battle_stats": {
+                    "total_damage_dealt": "",
+                    "character_swaps": "",
+                    "turns_elapsed": ""
+                }
+            }
+        }
+        

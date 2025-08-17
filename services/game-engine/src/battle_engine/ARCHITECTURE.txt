@@ -1,0 +1,161 @@
+BATTLE ENGINE ARCHITECTURE
+=========================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                API LAYER                                    │
+│                            (main.py endpoints)                              │
+└─────────────────────────┬───────────────────────────────────────────────────┘
+                          │
+                          v
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            SERVICE LAYER                                    │
+│                          (services/battle_service.py)                       │
+└─────────────────────────┬───────────────────────────────────────────────────┘
+                          │
+                          v
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           BATTLE ENGINE                                     │
+│                        (battle_engine.py)                                   │
+│                     Main Battle Orchestrator                                │
+└─────────┬─────────────────┬─────────────────┬─────────────────┬─────────────┘
+          │                 │                 │                 │
+          v                 v                 v                 v
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│ BattleRules     │ │BattleParticipants│ │ BattleEvents    │ │   BattleState   │
+│                 │ │                 │ │                 │ │                 │
+│ Domain Logic:   │ │ Domain Logic:   │ │ Domain Logic:   │ │ Cross-Cutting:  │
+│ • Damage calc   │ │ • Character mgmt│ │ • Message gen   │ │ • Team ops      │
+│ • Win conditions│ │ • Team stats    │ │ • Event logging │ │ • Battle coord  │
+│ • Status effects│ │ • Swap validation│ │ • Status format │ │ • Transactions  │
+│                 │ │                 │ │                 │ │                 │
+│ Redis Ops:      │ │ Redis Ops:      │ │ Redis Ops:      │ │ Redis Ops:      │
+│ • Effect timers │ │ • Character data│ │ • Event logs    │ │ • Battle state  │
+│ • Ability CDs   │ │ • Active chars  │ │ • Battle history│ │ • Team data     │
+│ • Damage logs   │ │ • HP/MP updates │ │                 │ │ • Multi-ops     │
+└─────────┬───────┘ └─────────┬───────┘ └─────────┬───────┘ └─────────┬───────┘
+          │                   │                   │                   │
+          │                   │                   │                   │
+          └─────────────┬─────┴─────────────┬─────┴─────────────┬─────┘
+                        │                   │                   │
+                        v                   v                   v
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              REDIS LAYER                                    │
+│                                                                             │
+│  Key Patterns:                                                              │
+│  battle:{id}:state           ← BattleState (metadata, participants)         │
+│  battle:{id}:team:{user}:snapshot ← BattleState (immutable team composition)│
+│  battle:{id}:team:{user}:character:{char} ← BattleParticipants (mutable)    │
+│  battle:{id}:team:{user}:active ← BattleParticipants (active char)          │
+│  battle:{id}:events          ← BattleEvents (event log)                     │
+│  battle:{id}:effects:{char}  ← BattleRules (status effects)                 │
+│  battle:{id}:cooldowns:{char}← BattleRules (ability cooldowns)              │
+│                                                                             │
+│  Data Separation:                                                           │
+│  • Snapshots: Frozen at battle start (stats, abilities, team roster)       │
+│  • Character State: Dynamic during battle (HP, MP, effects, cooldowns)     │
+│  • Battle State: Coordination data (turn order, participants, rules)       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+CALL FLOW EXAMPLE (Process Turn):
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1. API receives turn request                                                │
+│ 2. BattleService → BattleEngine.process_turn()                             │
+│ 3. BattleEngine calls:                                                      │
+│    ├─ BattleRules.validate_action() ────┐ (own Redis ops)                  │
+│    ├─ BattleParticipants.update() ──────┤ (own Redis ops)                  │
+│    ├─ BattleEvents.log_action() ────────┤ (own Redis ops)                  │
+│    └─ BattleState.execute_transaction() ┘ (coordinates multi-service ops)   │
+│ 4. BattleEngine checks win conditions via BattleRules                      │
+│ 5. Return formatted response via BattleEvents                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+ARCHITECTURE PRINCIPLES:
+=======================
+
+BattleState (repository/) - Complex Coordination & Transactions:
+• Team operations that span multiple characters
+• Battle-wide state management
+• Atomic multi-service operations
+• Cross-cutting Redis operations
+• Battle lifecycle management
+
+Services (service/) - Domain Expertise with Optimized Redis:
+• BattleRules: Combat mechanics, damage, win conditions
+• BattleParticipants: Character/team management, stats
+• BattleEvents: Messaging, logging, notifications
+• Each service has its own Redis patterns for performance
+
+BattleEngine - Orchestrates the Services:
+• Main entry point for battle operations
+• Coordinates between services
+• Handles high-level battle flow
+• Manages turn order and battle state
+
+WHAT GOES WHERE:
+===============
+
+BattleState Should Contain:
+• set_team_data() / get_team_data() - Complete team composition
+• get_team_status() - Multi-character aggregations
+• swap_active_character() - Atomic swap with events/cooldowns
+• get_team_composition() - Team membership queries
+• set_battle_state() / get_battle_state() - Overall battle metadata
+• execute_battle_transaction() - Multi-service atomic operations
+• Redis connection management and key generation
+
+Services Should Contain:
+• BattleParticipants: Character CRUD, active character tracking, team stats
+• BattleRules: Damage calculations, status effects, ability validation
+• BattleEvents: Event logging, message generation, battle history
+• Their own specialized Redis operations for performance
+
+TEAM SUPPORT:
+============
+• Up to 6 characters per user/team
+• Active character tracking per team
+• Character swapping with cooldowns
+• Team-wide status effects and buffs
+• Multi-target abilities
+• Team-based win conditions
+
+BATTLE SNAPSHOT SYSTEM:
+======================
+
+Team Composition Locking:
+• Teams are "frozen" at battle start to prevent mid-battle changes
+• Complete team snapshot captured including character stats, abilities, levels
+• New characters/abilities gained during battle don't affect ongoing battle
+• Ensures fairness and battle integrity
+
+Redis Key Structure for Snapshots:
+• battle:{id}:team:{user}:snapshot - Immutable team composition at battle start
+• battle:{id}:team:{user}:character:{char} - Mutable battle state (HP/MP/effects)
+• battle:{id}:team:{user}:active - Current active character
+
+Snapshot Data Structure:
+{
+  "characters": {
+    "char_1": {
+      "character_id": 1, "name": "Aang", "level": 15,
+      "max_hp": 120, "max_mp": 80, "base_attack": 45,
+      "abilities": [1, 5, 12, 18], "element": "air"
+    }
+  },
+  "team_size": 3,
+  "snapshot_time": "2025-01-17T10:30:00Z"
+}
+
+Battle State vs Snapshot:
+• Snapshot: Immutable baseline (stats, abilities, team composition)
+• Battle State: Mutable during battle (current HP/MP, status effects, cooldowns)
+• Separation ensures battle consistency while allowing dynamic combat changes
+
+KEY BENEFITS:
+============
+• Clear separation of concerns
+• Performance through specialized Redis patterns
+• Coordination through BattleState for complex operations
+• Flexibility for each service to optimize data access
+• Maintainable and testable architecture
+• Battle integrity through team composition locking
+• Audit trail for battle replay and analysis
